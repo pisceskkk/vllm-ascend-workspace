@@ -81,7 +81,12 @@ order is:
 Family names follow the **DeepSeek papers**, not the CANN backend
 class (DSA and CSA both route through `AscendSFABackend` on Ascend,
 but they are different paper architectures distinguished by whether
-the Compressor kernel is present):
+the Compressor kernel is present). The decision is implemented exactly
+once in `common.resolve_attention_family(categories)`, where
+`categories` is the union of `op_categories` emitted by
+`categories_and_roles` for the events in the block. The HTML report
+function `detect_attention_subtype` is a thin wrapper around that
+resolver, so the report and the unit-test contract cannot drift apart.
 
 1. `attention.kv_compressor` AND `attention.lightning_indexer` AND
    `attention.sparse_sharedkv` → **CSA** (DeepSeek-V4 main layers,
@@ -96,7 +101,19 @@ the Compressor kernel is present):
    `attention.mla.kv_norm_rope_cache` / `attention.mla.v_up_proj`,
    with NO sparse signatures → **MLA** (DeepSeek-V2 / V3).
 5. else `attention.linear_or_mamba` present → **linear / mamba / GDN**.
-6. else `attention.gqa_or_mha` only → **dense GQA / MHA**.
+6. else `attention.gqa_or_mha` only → **dense GQA / MHA**. This also
+   covers `UnpadFlashAttention`, which is the long-context branch of
+   the dense `AscendAttentionBackend` — NOT a separate FA backend.
+   The previous `fa` family value was removed for that reason.
+
+Two earlier traps this category-driven decision avoids:
+* `UnpadFlashAttention` returning `fa` from a raw-substring matcher
+  while the YAML mapped it to `attention.gqa_or_mha` (contract drift).
+* A block containing only `KVQuantSparseAttnSharedKVMetadata`
+  satisfying the main sparse-shared-KV signature because the substring
+  `sharedkv` was loose. The metadata sub-category
+  (`attention.sparse_sharedkv.metadata`) is deliberately separate and
+  never satisfies the CSA / DSA must-have set.
 
 `attention.kvcomp.topk` is an *overlay* on top of one of the above
 (Hamming-distance KV pruning helper) — it does not change the host

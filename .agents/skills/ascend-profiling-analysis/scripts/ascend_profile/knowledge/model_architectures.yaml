@@ -100,7 +100,11 @@ architectures:
     ffn: mc2
 
   GlmMoeDsaForCausalLM:
-    attention_candidates: [mla, sfa]
+    # The class name advertises "DSA" but the upstream implementation
+    # was reused from the GLM MoE MLA path. Treat both as legitimate
+    # candidates until we have a real profile to confirm; the analyser
+    # disambiguates per-block via kernel_signatures.yaml.
+    attention_candidates: [mla, dsa]
     ffn: mc2
     hf_config_signals: [index_topk]
     notes: |

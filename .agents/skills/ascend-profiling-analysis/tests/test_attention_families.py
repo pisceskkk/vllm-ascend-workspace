@@ -1,24 +1,29 @@
 """Family-resolution tests for attention.
 
-We don't have a YAML loader yet, so the cheat-sheet from
-``knowledge/attention_families.yaml`` is mirrored here as
-``_resolve_attention_family`` and applied to **bags of kernel names**
-that match real DSV2/DSV3.2/DSV4/Qwen3/Mamba traces. The test fails if
-the combination of categories emitted by ``common.categories_and_roles``
-no longer resolves to the expected paper-aligned family.
+These tests pin two contracts at once:
 
-This is the executable form of the "must_have / must_not_have"
-signatures listed in attention_families.yaml. Family names follow the
-DeepSeek papers (``mla`` / ``dsa`` / ``csa`` / ``hca`` / ``gqa`` / …),
-NOT the CANN backend class name. DSA (V3.2) and CSA (V4) both route
-through AscendSFABackend on Ascend, but they are different paper
-architectures distinguished by whether a Compressor kernel is present.
+1. **The category-driven resolver** (``common.resolve_attention_family``)
+   maps kernel bags to the right paper-aligned family. This is the
+   executable form of the "must_have / must_not_have" signatures in
+   ``knowledge/attention_families.yaml``.
+2. **The HTML report uses the same resolver.**
+   ``html_report.detect_attention_subtype`` is tested directly with
+   fake ``Event``-shaped objects, so the test contract and the report
+   output cannot drift apart.
+
+Family names follow the DeepSeek papers (``mla`` / ``dsa`` / ``csa`` /
+``hca`` / ``gqa`` / …), NOT the CANN backend class name. DSA (V3.2)
+and CSA (V4) both route through AscendSFABackend on Ascend, but they
+are different paper architectures distinguished by whether a
+Compressor kernel is present.
 """
 
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 import pytest
 
@@ -27,10 +32,10 @@ _SCRIPTS = _SKILL_ROOT / "scripts"
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-from ascend_profile import common  # noqa: E402
+from ascend_profile import common, html_report  # noqa: E402
 
 
-def _categories_from_kernels(names: list[str]) -> set[str]:
+def _categories_from_kernels(names: Iterable[str]) -> set[str]:
     cats: set[str] = set()
     for n in names:
         c, _ = common.categories_and_roles(n, "", "")
@@ -38,46 +43,40 @@ def _categories_from_kernels(names: list[str]) -> set[str]:
     return cats
 
 
-def _resolve_attention_family(names: list[str]) -> str:
-    """Apply the cheat-sheet from attention_families.yaml.
+def _resolve_attention_family(names: Iterable[str]) -> str:
+    """Convenience wrapper that runs the kernel names through the same
+    pipeline the HTML report uses: ``categories_and_roles`` to get the
+    category set, then ``common.resolve_attention_family``."""
+    return common.resolve_attention_family(_categories_from_kernels(names))
 
-    Returns one of: ``csa``, ``hca``, ``dsa``, ``mla``, ``linear``,
-    ``gqa``, ``fa``, ``attn``. KVComp overlay is appended as ``+kvc``.
+
+# --- Minimal Event stand-in for the html_report.detect_attention_subtype test ---
+
+
+@dataclass
+class _FakeEvent:
+    name: str
+    rank_id: str = "rank0"
+    row_idx: int = 0
+    task_type: str = ""
+    accel_core: str = ""
+
+
+@dataclass
+class _FakeBlock:
+    """Smallest object that ``detect_attention_subtype`` will accept.
+
+    The function only reads ``b.events`` and slices it via
+    ``events_in_row_range(b.events, row_start, row_end, rank_id)``.
+    ``events_in_row_range`` filters by ``rank_id`` and ``row_idx``, so
+    we set both consistently across the fake events.
     """
-    cats = _categories_from_kernels(names)
 
-    has_compressor = "attention.kv_compressor" in cats
-    has_indexer = "attention.lightning_indexer" in cats
-    has_sparse_sharedkv = (
-        "attention.sparse_sharedkv" in cats
-        or "attention.sparse_sharedkv.metadata" in cats
-    )
-    has_dense_fia = "attention.gqa_or_mha" in cats
-    has_mla_marker = (
-        "attention.mla" in cats
-        or "attention.mla.preprocess" in cats
-        or "attention.mla.kv_norm_rope_cache" in cats
-        or "attention.mla.v_up_proj" in cats
-    )
+    events: list
 
-    if has_compressor and has_indexer and has_sparse_sharedkv:
-        base = "csa"
-    elif has_compressor and has_dense_fia and not has_indexer and not has_sparse_sharedkv:
-        base = "hca"
-    elif has_indexer and has_sparse_sharedkv and not has_compressor:
-        base = "dsa"
-    elif has_mla_marker and not (has_compressor or has_indexer or has_sparse_sharedkv):
-        base = "mla"
-    elif "attention.linear_or_mamba" in cats:
-        base = "linear"
-    elif has_dense_fia:
-        base = "gqa"
-    else:
-        base = "attn"
 
-    if "attention.kvcomp.topk" in cats:
-        return f"{base}+kvc"
-    return base
+def _events_for(names: Iterable[str]) -> list[_FakeEvent]:
+    return [_FakeEvent(name=n, rank_id="rank0", row_idx=i) for i, n in enumerate(names)]
 
 
 # Real-trace kernel bags. Each list is a *subset* of the kernels that
@@ -257,11 +256,109 @@ _FIXTURES: list[tuple[str, list[str], str]] = [
     ids=[c[0] for c in _FIXTURES],
 )
 def test_attention_family_resolution(label, kernels, expected_family):
+    """Drives the category-driven resolver (used by the HTML report)."""
     got = _resolve_attention_family(kernels)
     assert got == expected_family, (
         f"fixture {label}: kernels {kernels} resolved to family {got!r}, "
         f"expected {expected_family!r}"
     )
+
+
+@pytest.mark.parametrize(
+    "label,kernels,expected_family",
+    _FIXTURES,
+    ids=[c[0] for c in _FIXTURES],
+)
+def test_detect_attention_subtype_matches_resolver(label, kernels, expected_family):
+    """The HTML report function must agree with the resolver on every
+    fixture. Previously ``detect_attention_subtype`` ran its own raw
+    kernel-name substring matcher, which diverged from the resolver on
+    e.g. ``UnpadFlashAttention`` (resolver: ``gqa``, old code: ``fa``)
+    and on metadata-only sparse blocks. This test pins the contract."""
+    block = _FakeBlock(events=_events_for(kernels))
+    got = html_report.detect_attention_subtype(
+        block,
+        row_start=0,
+        row_end=len(kernels),
+        rank_id="rank0",
+    )
+    assert got == expected_family, (
+        f"fixture {label}: detect_attention_subtype returned {got!r}, "
+        f"expected {expected_family!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Edge-case regressions surfaced by the PR #50 review (gpt-5.5)
+# ---------------------------------------------------------------------------
+
+
+def test_unpad_flash_attention_resolves_to_gqa_not_fa():
+    """``UnpadFlashAttention`` is the long-context branch of vllm-ascend's
+    dense ``AscendAttentionBackend`` — NOT a separate FA backend. It
+    must report as ``gqa`` so the YAML / category contract holds.
+    Regression: PR #50 review point 2.
+    """
+    bag = ["UnpadFlashAttention", "NpuRotaryEmbedding"]
+
+    assert _resolve_attention_family(bag) == "gqa"
+    block = _FakeBlock(events=_events_for(bag))
+    assert html_report.detect_attention_subtype(block, 0, len(bag), "rank0") == "gqa"
+
+
+def test_metadata_only_sparse_block_does_not_satisfy_sparse_signature():
+    """A block that only contains the *metadata* sub-kernel must NOT
+    classify as ``dsa`` / ``csa``. The main sparse-shared-KV category
+    (``attention.sparse_sharedkv``) is required; the metadata category
+    (``attention.sparse_sharedkv.metadata``) must not satisfy it.
+    Regression: PR #50 review point 3.
+    """
+    bag = ["KVQuantSparseAttnSharedKVMetadata", "QuantLightningIndexer"]
+    cats = _categories_from_kernels(bag)
+
+    assert "attention.sparse_sharedkv" not in cats
+    assert "attention.sparse_sharedkv.metadata" in cats
+    assert common.resolve_attention_family(cats) != "dsa"
+    assert common.resolve_attention_family(cats) != "csa"
+
+    block = _FakeBlock(events=_events_for(bag))
+    got = html_report.detect_attention_subtype(block, 0, len(bag), "rank0")
+    assert got not in ("dsa", "csa"), (
+        f"metadata-only sparse block classified as {got!r}; the main "
+        "attention.sparse_sharedkv category must be required."
+    )
+
+
+def test_compressor_plus_dense_fia_alone_resolves_to_hca():
+    """V4 HCA-heuristic: Compressor + dense FIA, no indexer, no
+    sparse-shared-KV. Verifies the resolver agrees with the cheat-sheet
+    step 2.
+    """
+    bag = ["Compressor", "KVCompressEpilog", "FusedInferAttentionScore"]
+    assert _resolve_attention_family(bag) == "hca"
+    block = _FakeBlock(events=_events_for(bag))
+    assert html_report.detect_attention_subtype(block, 0, len(bag), "rank0") == "hca"
+
+
+def test_compressor_indexer_sparse_resolves_to_csa():
+    """V4 CSA main layer: all three sparse-attention building blocks
+    plus a Compressor. Verifies the resolver agrees with the cheat-sheet
+    step 1.
+    """
+    bag = ["Compressor", "QuantLightningIndexer", "KVQuantSparseAttnSharedKV"]
+    assert _resolve_attention_family(bag) == "csa"
+    block = _FakeBlock(events=_events_for(bag))
+    assert html_report.detect_attention_subtype(block, 0, len(bag), "rank0") == "csa"
+
+
+def test_indexer_plus_sparse_no_compressor_resolves_to_dsa():
+    """V3.2 DSA: Lightning Indexer + Sparse-SharedKV, no Compressor.
+    Verifies the resolver agrees with the cheat-sheet step 3.
+    """
+    bag = ["QuantLightningIndexer", "KVQuantSparseAttnSharedKV"]
+    assert _resolve_attention_family(bag) == "dsa"
+    block = _FakeBlock(events=_events_for(bag))
+    assert html_report.detect_attention_subtype(block, 0, len(bag), "rank0") == "dsa"
 
 
 def test_csa_vs_dsa_distinguished_by_compressor():

@@ -949,7 +949,16 @@ def categories_and_roles(name: str, task_type: str, accelerator_core: str) -> tu
         roles.add("moe")
 
     # --- MoE: expert matmul -----------------------------------------------
-    if any(token in text for token in ("groupedmatmul", "gmm")):
+    # Beware substring collisions: a fused MC2 kernel name like
+    # ``DispatchGmmCombineDecode`` contains ``gmm`` but is a single fused
+    # dispatch+expert+combine op, NOT a standalone expert matmul. Guard
+    # the broad ``gmm`` rule with the fused-MC2 detection above so the
+    # category stays exactly ``moe.dispatch_expert_compute`` for fused
+    # MC2 kernels (matches the kernel_signatures.yaml contract).
+    if (
+        any(token in text for token in ("groupedmatmul", "gmm"))
+        and not is_fused_mc2_kernel
+    ):
         categories.add("moe.expert_matmul")
         categories.add("compute.matmul")
         roles.add("moe")
@@ -1013,6 +1022,102 @@ def categories_and_roles(name: str, task_type: str, accelerator_core: str) -> tu
     result = (tuple(sorted(categories)), tuple(sorted(roles)))
     _CATEGORY_ROLE_CACHE[cache_key] = result
     return result
+
+
+# ----------------------------------------------------------------------------
+# Attention family resolver (category-driven)
+# ----------------------------------------------------------------------------
+# Single source of truth for the paper-aligned attention family label used
+# by both ``html_report.detect_attention_subtype`` and the unit tests in
+# ``tests/test_attention_families.py``. Keeping the decision logic here
+# (instead of duplicating it as a private helper in either consumer)
+# guarantees the test contract and the HTML report agree.
+#
+# Inputs are category labels emitted by ``categories_and_roles``, NOT raw
+# kernel names — that way:
+#   * metadata-only categories like ``attention.sparse_sharedkv.metadata``
+#     can't masquerade as the main ``attention.sparse_sharedkv``
+#     signature (regression-tested);
+#   * future kernel renames touch one place (``categories_and_roles`` /
+#     ``kernel_signatures.yaml``) and the resolver stays unchanged.
+#
+# Returns one of the paper-aligned family names:
+#
+#   * ``csa``    — DeepSeek-V4 main layers (Compressed Sparse Attention)
+#   * ``hca``    — DeepSeek-V4 alternating layers (Heavily Compressed
+#                  Attention; heuristic)
+#   * ``dsa``    — DeepSeek-V3.2 (DeepSeek Sparse Attention, arxiv
+#                  2512.02556)
+#   * ``mla``    — DeepSeek-V2 / V3 (Multi-head Latent Attention)
+#   * ``linear`` — Mamba / GDN / linear attention
+#   * ``gqa``    — dense GQA / MHA via FIA (Llama / Qwen / Mistral …);
+#                  also covers vllm-ascend's ``UnpadFlashAttention``
+#                  which is part of ``AscendAttentionBackend`` (dense
+#                  path), NOT a separate FA backend.
+#   * ``attn``   — unknown / unclassified
+#
+# An ``+kvc`` suffix is appended if the Hamming-distance KV-compression
+# overlay is active (decode-only opt-in).
+#
+# Note on ``fa`` family: previous drafts emitted ``fa`` for any kernel
+# whose name contained ``flashattention``. That created a contract
+# mismatch with ``kernel_signatures.yaml`` which maps
+# ``UnpadFlashAttention`` to ``attention.gqa_or_mha`` (since it's the
+# long-context branch of the dense ``AscendAttentionBackend``, not a
+# distinct FA backend). The category-driven resolver here returns
+# ``gqa`` for that case, eliminating the divergence flagged in PR review.
+
+_MLA_CATEGORIES = frozenset((
+    "attention.mla",
+    "attention.mla.preprocess",
+    "attention.mla.kv_norm_rope_cache",
+    "attention.mla.v_up_proj",
+))
+
+
+def resolve_attention_family(categories: Iterable[str]) -> str:
+    """Decide the paper-aligned attention family label from a set of
+    category names emitted by ``categories_and_roles``.
+
+    The decision order mirrors
+    ``knowledge/attention_families.yaml:cheat_sheet`` exactly.
+    """
+    cats = set(categories)
+
+    has_compressor = "attention.kv_compressor" in cats
+    has_indexer = "attention.lightning_indexer" in cats
+    has_sparse_sharedkv = "attention.sparse_sharedkv" in cats
+    # NOTE: ``attention.sparse_sharedkv.metadata`` is deliberately not
+    # treated as evidence of the main sparse signature — a metadata-only
+    # block must not classify as DSA / CSA.
+    has_dense_fia = "attention.gqa_or_mha" in cats
+    has_mla_marker = bool(_MLA_CATEGORIES & cats)
+
+    if has_compressor and has_indexer and has_sparse_sharedkv:
+        base = "csa"
+    elif (
+        has_compressor
+        and has_dense_fia
+        and not has_indexer
+        and not has_sparse_sharedkv
+    ):
+        base = "hca"
+    elif has_indexer and has_sparse_sharedkv and not has_compressor:
+        base = "dsa"
+    elif has_mla_marker and not (
+        has_compressor or has_indexer or has_sparse_sharedkv
+    ):
+        base = "mla"
+    elif "attention.linear_or_mamba" in cats:
+        base = "linear"
+    elif has_dense_fia:
+        base = "gqa"
+    else:
+        base = "attn"
+
+    if "attention.kvcomp.topk" in cats:
+        base = f"{base}+kvc"
+    return base
 
 
 def is_aicpu_event(event: NormalizedEvent) -> bool:

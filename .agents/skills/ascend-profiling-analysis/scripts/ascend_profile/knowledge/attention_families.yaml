@@ -243,14 +243,27 @@ cheat_sheet:
     - |
       5. Linear: ``attention.linear_or_mamba``  →  family = linear.
     - |
-      6. FA: any kernel name matches ``flashattention``  →  family = fa.
+      6. GQA: ``attention.gqa_or_mha`` (covers FIA AND
+         ``UnpadFlashAttention``, which is the dense long-context branch
+         of ``AscendAttentionBackend``, NOT a separate FA backend)
+         →  family = gqa.
     - |
-      7. GQA: ``attention.gqa_or_mha`` (the FIA family) and no other
-         attention markers  →  family = gqa.
-    - |
-      8. Otherwise  →  family = attn.
+      7. Otherwise  →  family = attn.
   overlay:
     - "If ``attention.kvcomp.topk`` is present, append ``+kvc`` to the family label."
+  implementation: |
+    The decision is implemented exactly once in
+    ``common.resolve_attention_family(categories)``;
+    ``html_report.detect_attention_subtype`` and
+    ``tests/test_attention_families.py`` both consume that single
+    function so the report output and the test contract cannot drift.
+    Inputs are category labels emitted by ``categories_and_roles``,
+    NOT raw kernel names — this prevents two earlier bugs:
+      * ``UnpadFlashAttention`` being mis-routed to ``fa`` by a raw
+        substring match while the YAML mapped it to ``gqa``;
+      * a metadata-only sparse block satisfying the main
+        sparse-shared-KV signature because the raw matcher accepted
+        ``sharedkv`` from ``KVQuantSparseAttnSharedKVMetadata``.
 
 # ----------------------------------------------------------------------------
 # Why we don't subdivide CSA / DSA / MLA further at the family level

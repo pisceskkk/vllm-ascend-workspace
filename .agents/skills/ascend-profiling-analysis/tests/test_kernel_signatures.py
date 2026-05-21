@@ -330,6 +330,43 @@ def test_kernel_classification_matches_knowledge(
     )
 
 
+@pytest.mark.parametrize(
+    "name,expected_categories,expected_roles",
+    [
+        # Regression: PR #50 review point 1. The broad "gmm" substring
+        # rule used to fire on DispatchGmmCombineDecode and tag it as
+        # standalone moe.expert_matmul, contradicting
+        # kernel_signatures.yaml (categories: [moe.dispatch_expert_compute]
+        # only). Lock down the *exact* category set for the two fused
+        # MC2 single-kernel paths.
+        (
+            "DispatchGmmCombineDecode",
+            {"moe.dispatch_expert_compute"},
+            {"moe"},
+        ),
+        (
+            "DispatchFFNCombine",
+            {"moe.dispatch_expert_compute"},
+            {"moe"},
+        ),
+    ],
+)
+def test_exact_categories_for_fused_mc2_kernels(name, expected_categories, expected_roles):
+    """For kernels with a single declared category in
+    ``kernel_signatures.yaml``, assert exact set equality. Subset-style
+    assertions (used elsewhere in this file) would let an accidental
+    extra category like ``moe.expert_matmul`` slip through unnoticed."""
+    cats, roles = common.categories_and_roles(name, "", "")
+    assert set(cats) == expected_categories, (
+        f"kernel {name!r} expected exact category set {sorted(expected_categories)}, "
+        f"got {sorted(cats)}"
+    )
+    assert set(roles) == expected_roles, (
+        f"kernel {name!r} expected exact role set {sorted(expected_roles)}, "
+        f"got {sorted(roles)}"
+    )
+
+
 def test_deprecated_category_names_not_emitted_by_python() -> None:
     """The earlier drafts coined two non-canonical name families:
     ``attention.csa*`` (used as a generic catch-all) and ``attention.sfa*``

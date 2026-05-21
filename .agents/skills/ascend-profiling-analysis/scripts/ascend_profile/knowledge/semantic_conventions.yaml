@@ -142,12 +142,23 @@ attributes:
       - hca                        # DeepSeek V4: Heavily Compressed Attention (alternating)
       - dsa                        # DeepSeek V3.2: DeepSeek Sparse Attention (arxiv 2512.02556)
       - mla                        # DeepSeek V2 / V3: Multi-head Latent Attention
-      - gqa                        # dense GQA / MHA via FIA (Llama / Qwen / Mistral …)
-      - fa                         # generic FlashAttention path
+      - gqa                        # dense GQA / MHA via FIA — also covers vllm-ascend's
+                                   # ``UnpadFlashAttention`` which is the long-context branch
+                                   # of the dense ``AscendAttentionBackend`` (NOT a separate
+                                   # FA backend). There is intentionally no ``fa`` value.
       - linear                     # Mamba / GDN / linear attention
       - attn                       # unknown / unclassified
     suffix:
       "+kvc": "KVComp (Hamming-distance KV pruning) overlay active"
+    notes: |
+      Earlier drafts included an ``fa`` value emitted whenever a kernel
+      name contained ``flashattention``. That created a contract drift
+      with ``kernel_signatures.yaml`` which maps both
+      ``FusedInferAttentionScore`` and ``UnpadFlashAttention`` to the
+      single ``attention.gqa_or_mha`` category. The resolver
+      (``common.resolve_attention_family``) is now the single source of
+      truth and never emits ``fa``; the enum value was removed so the
+      schema test can detect any future regression that re-introduces it.
 
   bound_family:
     description: |
