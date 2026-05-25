@@ -13,6 +13,7 @@ venv/
 *.log
 *.out
 docs/superpowers/
+.claude/settings.json
 .claude/settings.local.json
 .codex/*
 !.codex/
