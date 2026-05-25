@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+import importlib.util
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[2]
 LIB_DIR = ROOT / ".agents" / "lib"
@@ -23,6 +26,15 @@ from vaws_validate import (  # noqa: E402
     require_env_name,
     require_safe_id,
 )
+
+
+def load_session_create_module():
+    path = ROOT / ".agents" / "skills" / "session-management" / "scripts" / "session_create.py"
+    spec = importlib.util.spec_from_file_location("_vaws_session_create_test", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class ValidatorTests(unittest.TestCase):
@@ -139,6 +151,76 @@ class LeaseValidationTests(unittest.TestCase):
                     npu_count=0,
                     port_available=lambda _port: True,
                 )
+
+
+class WorktreeCreateTests(unittest.TestCase):
+    def test_staging_binding_is_written_before_submodule_update(self) -> None:
+        module = load_session_create_module()
+        original_run_git = module.run_git
+        original_write_binding = module.write_current_session_binding
+        original_emit_progress = module.emit_progress
+        events: list[str] = []
+        fail_submodule = True
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree_root = Path(tmp) / "worktree"
+
+            def fake_run_git(args, *, cwd=module.ROOT, check=True):
+                if args[:3] == ["show-ref", "--verify", "--quiet"]:
+                    return SimpleNamespace(returncode=1, stdout="", stderr="")
+                if args[:2] == ["worktree", "add"]:
+                    worktree_root.mkdir(parents=True)
+                    events.append("worktree-add")
+                    return SimpleNamespace(returncode=0, stdout="", stderr="")
+                if args == ["submodule", "update", "--init", "--recursive"]:
+                    events.append("submodule-update")
+                    if fail_submodule:
+                        raise RuntimeError("submodule update failed")
+                    return SimpleNamespace(returncode=0, stdout="", stderr="")
+                raise AssertionError(f"unexpected git args: {args!r}")
+
+            def fake_write_binding(repo_root, *, session_id, source, **_kwargs):
+                events.append("binding")
+                path = Path(repo_root) / ".vaws-local" / "current-session.json"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    json.dumps({"session_id": session_id, "source": source}) + "\n",
+                    encoding="utf-8",
+                )
+                return path
+
+            try:
+                module.run_git = fake_run_git
+                module.write_current_session_binding = fake_write_binding
+                module.emit_progress = lambda *_args, **_kwargs: None
+                with self.assertRaisesRegex(RuntimeError, "submodule update failed"):
+                    module.ensure_worktree(
+                        session_id="sess-abc",
+                        branch="session/sess-abc",
+                        base_ref="main",
+                        worktree_root=worktree_root,
+                        no_worktree=False,
+                    )
+                self.assertEqual(events, ["worktree-add", "binding", "submodule-update"])
+                fail_submodule = False
+                events.clear()
+                reused_root, reused_payload = module.ensure_worktree(
+                    session_id="sess-abc",
+                    branch="session/sess-abc",
+                    base_ref="main",
+                    worktree_root=worktree_root,
+                    no_worktree=False,
+                )
+            finally:
+                module.run_git = original_run_git
+                module.write_current_session_binding = original_write_binding
+                module.emit_progress = original_emit_progress
+
+            self.assertEqual(events, ["submodule-update"])
+            self.assertEqual(reused_root, worktree_root.resolve())
+            self.assertEqual(reused_payload["action"], "reused")
+            binding = json.loads((worktree_root / ".vaws-local" / "current-session.json").read_text())
+            self.assertEqual(binding["session_id"], "sess-abc")
+            self.assertEqual(binding["source"], "session_create-staging")
 
 
 if __name__ == "__main__":

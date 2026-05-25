@@ -300,6 +300,9 @@ def ensure_worktree(
     if worktree_root.exists():
         bound = existing_worktree_bound(worktree_root)
         if bound == session_id:
+            emit_progress("worktree", "reusing bound worktree", path=str(worktree_root), branch=branch)
+            emit_progress("worktree", "initializing submodules", path=str(worktree_root))
+            run_git(["submodule", "update", "--init", "--recursive"], cwd=worktree_root)
             return worktree_root, {"action": "reused", "path": str(worktree_root), "branch": branch}
         raise SessionStateError(
             f"worktree path already exists and is not bound to session {session_id}: {worktree_root}"
@@ -314,9 +317,21 @@ def ensure_worktree(
     else:
         run_git(["worktree", "add", "-b", branch, str(worktree_root), base_ref])
         action = "created-branch"
+    staging_binding = write_current_session_binding(
+        worktree_root,
+        session_id=session_id,
+        source="session_create-staging",
+        base_repo_root=ROOT,
+    )
     emit_progress("worktree", "initializing submodules", path=str(worktree_root))
     run_git(["submodule", "update", "--init", "--recursive"], cwd=worktree_root)
-    return worktree_root, {"action": action, "path": str(worktree_root), "branch": branch, "base_ref": base_ref}
+    return worktree_root, {
+        "action": action,
+        "path": str(worktree_root),
+        "branch": branch,
+        "base_ref": base_ref,
+        "staging_binding": str(staging_binding),
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -421,6 +436,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "action": "skipped",
                 "reason": "explicit --no-worktree session does not overwrite repo-root current-session",
                 "path": str(local_root / ".vaws-local" / "current-session.json"),
+            }
+        elif worktree_payload.get("staging_binding"):
+            binding_payload = {
+                "action": "written",
+                "path": worktree_payload["staging_binding"],
+                "source": "session_create-staging",
             }
         else:
             binding_path = write_current_session_binding(
