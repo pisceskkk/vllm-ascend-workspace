@@ -5,4 +5,11 @@
 [submodule "vllm"]
 	path = vllm
 	url = https://github.com/vllm-project/vllm.git
-	branch = main
+[submodule "aisbench_auto_tools"]
+	path = aisbench_auto_tools
+	url = https://github.com/LookAround0301/aisbench_auto_tools_prefix-master-pro.git
+        branch = main
+[submodule "benchmark"]
+	path = benchmark
+	url = https://github.com/AISBench/benchmark.git
+        branch = master
