@@ -28,6 +28,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/session-management/` is the source-of-truth skill package for isolated parallel agent sessions.
 - `.agents/skills/remote-toolbox/` is the compatibility skill package for managed VAWS target/probe/exec/job/sync/service/artifact/cleanup tools.
 - `.agents/skills/remote-code-parity/` is the source-of-truth skill package for remote code parity before remote execution.
+- `.agents/skills/modelscope/` is the source-of-truth skill package for ModelScope weight download, resume, status, and SHA256 verification workflows.
 - `.agents/skills/vllm-ascend-serving/` is the source-of-truth skill package for starting, checking, and stopping vLLM Ascend online services on managed containers.
 - `.agents/skills/vllm-ascend-benchmark/` is the source-of-truth skill package for running `vllm bench serve` performance benchmarks on managed containers.
 - `.agents/skills/ascend-memory-profiling/` is the source-of-truth skill package for profiling and attributing HBM memory usage on Ascend NPU for vLLM serving scenarios.
@@ -87,6 +88,10 @@ Current primary helpers:
 - `remote-code-parity/scripts/remote_code_parity.py`
 - `remote-code-parity/scripts/install_consent.py`
 - `remote-code-parity/scripts/gc_runtime_cache.py`
+- `modelscope/scripts/modelscope_auto.py`
+- `modelscope/scripts/download_from_modelscope.py`
+- `modelscope/scripts/modelscope_download_status.py`
+- `modelscope/scripts/verify_modelscope_sha256.py`
 - `vllm-ascend-serving/scripts/serve_start.py`
 - `vllm-ascend-serving/scripts/serve_status.py`
 - `vllm-ascend-serving/scripts/serve_stop.py`
@@ -143,7 +148,7 @@ commands with local logs, tracks long jobs, splits source-only/materialize/insta
 sync modes, wraps service lifecycle entrypoints, transfers artifacts with SSH
 streaming plus hash manifests, and performs dry-run-capable cleanup.
 
-Remote-code-parity transport is container-only after machine attach: use machine inventory to resolve the target, then push synthetic refs directly into the container-local cache root. Synthetic mirrors should also publish an advertised branch ref for the current snapshot so nested repos can be materialized without brittle submodule fetch behavior. Runtime installs should explicitly forward whitelisted `VAWS_*` compile/cache env into the remote shell, configure multiple pip indexes (Tsinghua as primary, Aliyun and PyPI as additional), scope the default Ascend package index to `vllm-ascend` installs, reuse pip / uv / CMake `FetchContent` caches under `/root/.cache`, default paired-image editable installs to `--no-deps`, bound uv bootstrap mirror attempts, stream progress for long package steps, record the effective install env, and keep consent/runtime-state writes atomic.
+Remote-code-parity transport is container-only after machine attach: use machine inventory to resolve the target, then push synthetic refs directly into the container-local cache root. Synthetic mirrors should also publish an advertised branch ref for the current snapshot so nested repos can be materialized without brittle submodule fetch behavior. Runtime installs should use the single A3-tested HuaweiCloud pip index, stream progress for long package steps, and keep consent/runtime-state writes atomic.
 
 The legacy repo-root `.machine-inventory.json` is compatibility input only and should not be reintroduced as the primary path.
 
@@ -229,6 +234,13 @@ If you change `remote-code-parity`, update these together:
 - `.agents/skills/remote-code-parity/references/`
 - `.agents/skills/remote-code-parity/scripts/`
 - `AGENTS.md`, `README.md`, and this file when routing, transport model, or local-state behavior changes
+
+If you change `modelscope`, update these together:
+
+- `.agents/skills/modelscope/SKILL.md`
+- `.agents/skills/modelscope/scripts/`
+- `.agents/skills/modelscope/agents/`
+- `AGENTS.md`, `README.md`, and this file when routing or output contract changes
 
 Keep the files under `.agents/skills/` as the canonical supporting files for repo-local skills.
 
