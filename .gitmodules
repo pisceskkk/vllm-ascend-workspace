@@ -7,7 +7,7 @@
 	url = https://github.com/vllm-project/vllm.git
 [submodule "aisbench_auto_tools"]
 	path = aisbench_auto_tools
-	url = https://github.com/LookAround0301/aisbench_auto_tools_prefix-master-pro.git
+	url = https://github.com/rayn-zzz/aisbench_auto_tools_prefix.git
         branch = main
 [submodule "benchmark"]
 	path = benchmark
