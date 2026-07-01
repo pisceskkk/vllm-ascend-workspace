@@ -989,18 +989,19 @@ fi
 sourced_scripts=""
 safe_source() {
   file="$1"
+  shift || true
   if [ -f "$file" ]; then
     set +u
-    . "$file" >/dev/null 2>&1 || true
+    . "$file" "$@" >/dev/null 2>&1 || true
     set -u
-    sourced_scripts="${sourced_scripts}${file}
+    sourced_scripts="${sourced_scripts}${file}${*:+ $*}
 "
   fi
 }
 safe_source /etc/profile.d/vaws-ascend-env.sh
 safe_source /usr/local/Ascend/ascend-toolkit/set_env.sh
 safe_source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh
-safe_source /usr/local/Ascend/nnal/atb/set_env.sh
+safe_source /usr/local/Ascend/nnal/atb/set_env.sh "--cxx_abi=${VAWS_ATB_CXX_ABI:-1}"
 
 py=""
 for cand in python3 python; do
@@ -1591,8 +1592,43 @@ if [ -n "$_vaws_python_dir" ]; then
 else
   _path_prefix="/usr/local/bin:/usr/local/sbin"
 fi
+_vaws_atb_cxx_abi="1"
+if [ -n "$_vaws_python_dir" ] && [ -x "$_vaws_python_dir/python3" ]; then
+  _torch_cxx_abi="$("$_vaws_python_dir/python3" - <<'PY' 2>/dev/null || true
+import torch
+print("1" if torch.compiled_with_cxx11_abi() else "0")
+PY
+)"
+  case "$_torch_cxx_abi" in
+    0|1)
+      _vaws_atb_cxx_abi="$_torch_cxx_abi"
+      ;;
+  esac
+fi
+patch_atb_set_env_source() {
+  file="$1"
+  [ -f "$file" ] || return 0
+  if [ ! -f "${file}.vaws-atb-abi.bak" ]; then
+    cp -a "$file" "${file}.vaws-atb-abi.bak" 2>/dev/null || true
+  fi
+  tmp_file="$(mktemp)"
+  if awk -v abi="$_vaws_atb_cxx_abi" '
+    /^[[:space:]]*(source|\.)[[:space:]]+\/usr\/local\/Ascend\/nnal\/atb\/set_env\.sh[[:space:]]*$/ {
+      sub(/[[:space:]]*$/, "")
+      print $0 " --cxx_abi=" abi
+      next
+    }
+    { print }
+  ' "$file" > "$tmp_file"; then
+    cat "$tmp_file" > "$file"
+  fi
+  rm -f "$tmp_file"
+}
+patch_atb_set_env_source /etc/profile
+patch_atb_set_env_source /root/.bashrc
 cat > /etc/profile.d/vaws-ascend-env.sh <<EOF_CONTAINER_ENV
 #!/bin/sh
+export VAWS_ATB_CXX_ABI="\${VAWS_ATB_CXX_ABI:-$_vaws_atb_cxx_abi}"
 if [ -z "\${ASCEND_HOME_PATH:-}" ]; then
   if [ -d /usr/local/Ascend/ascend-toolkit/latest ]; then
     export ASCEND_HOME_PATH=/usr/local/Ascend/ascend-toolkit/latest
@@ -1607,7 +1643,7 @@ if [ -f /usr/local/Ascend/ascend-toolkit/latest/set_env.sh ]; then
   . /usr/local/Ascend/ascend-toolkit/latest/set_env.sh >/dev/null 2>&1 || true
 fi
 if [ -f /usr/local/Ascend/nnal/atb/set_env.sh ]; then
-  . /usr/local/Ascend/nnal/atb/set_env.sh >/dev/null 2>&1 || true
+  . /usr/local/Ascend/nnal/atb/set_env.sh "--cxx_abi=\${VAWS_ATB_CXX_ABI:-1}" >/dev/null 2>&1 || true
 fi
 export LD_LIBRARY_PATH="/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64:\${LD_LIBRARY_PATH:-}"
 export PATH="$_path_prefix:\${PATH:-}"
@@ -1626,10 +1662,10 @@ if [ -n "$image" ]; then
 fi
 EOF_CONTAINER_ENV
 chmod 0644 /etc/profile.d/vaws-ascend-env.sh
-python3 - "$machine_type" "$container_type" "$soc" "$image" "$workdir" "$namespace" > /etc/vaws/container-info.json <<'PY'
+python3 - "$machine_type" "$container_type" "$soc" "$image" "$workdir" "$namespace" "$_vaws_atb_cxx_abi" > /etc/vaws/container-info.json <<'PY'
 import json
 import sys
-machine_type, container_type, soc, image, workdir, namespace = sys.argv[1:]
+machine_type, container_type, soc, image, workdir, namespace, atb_cxx_abi = sys.argv[1:]
 print(json.dumps({
     "machine_type": machine_type or None,
     "container_type": container_type or None,
@@ -1637,6 +1673,7 @@ print(json.dumps({
     "image": image or None,
     "workdir": workdir,
     "namespace": namespace or None,
+    "atb_cxx_abi": atb_cxx_abi or None,
     "env_file": "/etc/profile.d/vaws-ascend-env.sh",
 }, ensure_ascii=False, indent=2))
 PY
@@ -2105,18 +2142,19 @@ export MKL_NUM_THREADS=1
 sourced_file_log=""
 safe_source() {
   file="$1"
+  shift || true
   if [ -f "$file" ]; then
     set +u
-    . "$file" >/dev/null 2>&1 || true
+    . "$file" "$@" >/dev/null 2>&1 || true
     set -u
-    sourced_file_log+="$file\n"
+    sourced_file_log+="$file${*:+ $*}\n"
   fi
 }
 
 safe_source /etc/profile.d/vaws-ascend-env.sh
 safe_source /usr/local/Ascend/ascend-toolkit/set_env.sh
 safe_source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh
-safe_source /usr/local/Ascend/nnal/atb/set_env.sh
+safe_source /usr/local/Ascend/nnal/atb/set_env.sh "--cxx_abi=${VAWS_ATB_CXX_ABI:-1}"
 safe_source /vllm-workspace/vllm-ascend/vllm_ascend/_cann_ops_custom/vendors/vllm-ascend/bin/set_env.bash
 
 "$PYTHON_BIN" - <<'PY' "$PYTHON_BIN" "$sourced_file_log"

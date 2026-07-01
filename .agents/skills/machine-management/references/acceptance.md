@@ -99,6 +99,7 @@ These should not trigger `machine-management` unless machine readiness is the ob
 - the skill does not recreate or delete a container unless the user explicitly asked for destructive repair
 - the smoke path stays dynamic: no pinned Python patch version, no unconditional vendor `set_env.bash`, no default `devlib` injection
 - verify / smoke prepend `driver/lib64/common`, `driver/lib64/driver`, and `driver/lib64`, and source `/etc/profile.d/vaws-ascend-env.sh` when it exists
+- container bootstrap records `VAWS_ATB_CXX_ABI`, sources ATB with `--cxx_abi=<0|1>`, and patches common image startup files so `bash -lc true` does not spend 10+ seconds importing `torch` for ATB ABI detection
 
 ### Remove
 
@@ -133,5 +134,6 @@ Review these files together after every substantial skill edit:
 - `.agents/skills/machine-management/scripts/manage_machine.py`
 - `.agents/skills/machine-management/scripts/inventory.py`
 - inspect the generated `/etc/vaws/host-info.json`, `/etc/vaws/container-info.json`, and `/etc/profile.d/vaws-ascend-env.sh` on a real machine after any bootstrap logic change
+- after bootstrap changes touching shell startup, time a direct container SSH command and `bash -lc true`; the login-shell path should stay close to ordinary SSH startup and must not regress to ATB dynamic `import torch` latency
 - `.agents/scripts/workspace_profile.py`
 - `.agents/lib/vaws_local_state.py`
