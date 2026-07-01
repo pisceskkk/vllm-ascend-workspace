@@ -205,6 +205,15 @@ Container bootstrap writes persistent runtime environment configuration so that 
 - `/etc/profile.d/vaws-ascend-env.sh`: adds the runtime Python directory and Ascend driver libs to `PATH` and `LD_LIBRARY_PATH`.
 - `/etc/pip.conf`: configures pip with a single A3-tested source, HuaweiCloud (`https://repo.huaweicloud.com/repository/pypi/simple`). Do not add extra indexes by default.
 
+ATB environment initialization must be explicit and fast:
+
+- determine `torch.compiled_with_cxx11_abi()` once during container bootstrap when the runtime Python can import `torch`
+- persist the result as `VAWS_ATB_CXX_ABI` in `/etc/profile.d/vaws-ascend-env.sh` and `/etc/vaws/container-info.json`
+- source `/usr/local/Ascend/nnal/atb/set_env.sh` with `--cxx_abi=<0|1>` from generated VAWS env scripts, smoke paths, and common image startup files
+- patch existing image files such as `/etc/profile` and `/root/.bashrc` when they source ATB without an explicit ABI, keeping a `.vaws-atb-abi.bak` backup
+
+Do not rely on ATB's default dynamic ABI detection in shell startup paths. In vLLM-Ascend images, that detection can run `python3 -c "import torch"` after VAWS has prepended the runtime Python to `PATH`, making simple SSH/login-shell commands take 10+ seconds.
+
 The pip config write is best-effort: if the runtime Python cannot be discovered, the bootstrap continues without failing. Do not install `pytest` or other test packages during container bootstrap; fresh startup should stay focused on SSH reachability and durable runtime-source configuration.
 
 ## Mesh contract
