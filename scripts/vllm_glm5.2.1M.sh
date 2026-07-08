@@ -44,14 +44,14 @@ vllm serve /mnt/share/weight/GLM-5.2-Provide-0610-W4A8 \
     --served-model-name glm-5 \
     --max_model_len 1024000 \
     --max-num-batched-tokens 2048 \
-    --gpu-memory-utilization 0.90 \
+    --gpu-memory-utilization 0.93 \
     --api-server-count 1 \
     --max-num-seqs 4 \
     -dp 1 -pp 1 -tp 16 -pcp 1 -dcp 16 \
     --cp-kv-cache-interleave-size 128 \
     --compilation-config '{"cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes":[4, 16]}' \
-    --additional-config '{"sfa_dcp_replicate_k": true, "enable_dsa_cp": false, "ascend_compilation_config":{"enable_npugraph_ex": true, "enable_static_kernel": false},"fuse_muls_add":true, "multistream_overlap_shared_expert": true, "enable_mc2_hierarchy_comm":false, "enable_sparse_c8": true, "enable_cpu_binding":true, "recompute_scheduler_enable": false}' \
-    --speculative-config '{"num_speculative_tokens": 3,"method": "deepseek_mtp", "enforce_eager": "true"}' \
+    --additional-config '{"enable_dsa_cp": false, "ascend_compilation_config":{"enable_npugraph_ex": true, "enable_static_kernel": false},"fuse_muls_add":true, "multistream_overlap_shared_expert": true, "enable_mc2_hierarchy_comm":false, "enable_sparse_c8": true, "enable_cpu_binding":true, "recompute_scheduler_enable": false}' \
+    --speculative-config '{"num_speculative_tokens": 3,"method": "deepseek_mtp"}' \
     --quantization ascend \
     --enable-expert-parallel \
     --safetensors-load-strategy 'prefetch' \
