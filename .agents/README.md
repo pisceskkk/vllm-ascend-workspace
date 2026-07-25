@@ -39,6 +39,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/vllm-ascend-change-validation/` is the source-of-truth skill package for diff impact analysis, validation planning, downstream evidence linkage, and PR reports.
 - `.agents/skills/vllm-ascend-performance-regression/` is the source-of-truth skill package for controlled alternating baseline/candidate benchmark experiments and regression decisions.
 - `.agents/skills/vllm-ascend-distributed-debug/` is the source-of-truth skill package for structured multi-rank topology, collective, endpoint, and hang diagnosis.
+- `.agents/skills/ascend-operator-debug/` is the source-of-truth skill package for isolated Ascend operator reproduction and explicit input/mode reference matrices.
 - `.agents/scripts/workspace_profile.py` is the shared low-level helper for the local workspace machine profile.
 - `.agents/scripts/run_manifest.py` creates and validates shared Run Manifest v1 files.
 - `.agents/scripts/knowledge_validate.py` validates the versioned shared knowledge documents.
@@ -123,6 +124,7 @@ Current primary helpers:
 - `vllm-ascend-change-validation/scripts/change_validation.py`
 - `vllm-ascend-performance-regression/scripts/performance_regression.py`
 - `vllm-ascend-distributed-debug/scripts/distributed_debug.py`
+- `ascend-operator-debug/scripts/operator_debug.py`
 - `scripts/skill_catalog.py`
 - `scripts/run_manifest.py`
 - `scripts/knowledge_validate.py`

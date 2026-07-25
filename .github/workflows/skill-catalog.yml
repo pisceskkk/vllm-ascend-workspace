@@ -50,3 +50,6 @@ jobs:
 
       - name: Run distributed-debug tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-distributed-debug/tests
+
+      - name: Run operator-debug tests
+        run: python -B -m unittest discover -s .agents/skills/ascend-operator-debug/tests
