@@ -109,6 +109,8 @@ class UpstreamSyncTests(unittest.TestCase):
             self.assertIn(
                 "correctness:model-runner", plan["recommended_validation"]
             )
+            self.assertEqual(plan["apply_preconditions"]["current_head"], new)
+            self.assertFalse(plan["apply_preconditions"]["ready"])
 
     def test_apply_rejects_dirty_submodule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -145,6 +147,26 @@ class UpstreamSyncTests(unittest.TestCase):
             result = sync.apply(output, updated_at=NOW)
             self.assertEqual(result["status"], "applied")
             self.assertEqual(run(vllm, "rev-parse", "HEAD"), new)
+
+    def test_apply_rejects_analysis_plan_when_head_was_not_old_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            vllm, ascend, old, new = self.prepare(Path(tmp))
+            output = Path(tmp) / "report"
+            sync.plan(
+                output,
+                vllm_repo=vllm,
+                ascend_repo=ascend,
+                old_ref=old,
+                new_ref=new,
+                run_id="upstream-sync-1",
+                created_at=NOW,
+            )
+
+            with self.assertRaisesRegex(
+                sync.UpstreamSyncError,
+                "analysis-only",
+            ):
+                sync.apply(output, updated_at=NOW)
 
 
 if __name__ == "__main__":

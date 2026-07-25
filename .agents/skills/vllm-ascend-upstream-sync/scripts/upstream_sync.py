@@ -322,6 +322,10 @@ def plan(
     consumers = find_consumers(ascend_repo, changed, api)
     risky_api = [row for row in api if row["kind"] in {"removed", "changed"}]
     risk = "high" if risky_api and consumers else "medium" if consumers or risky_api else "low"
+    current_head = resolve_ref(vllm_repo, "HEAD")
+    worktree_clean = not bool(
+        git(vllm_repo, ["status", "--porcelain=v1", "--untracked-files=normal"])
+    )
     payload = {
         "schema_version": SCHEMA_VERSION,
         "run_id": run_id,
@@ -338,8 +342,10 @@ def plan(
         "consumers": consumers,
         "recommended_validation": validation_recommendations(changed),
         "apply_preconditions": {
-            "vllm_worktree_clean": True,
-            "current_head": old_sha,
+            "vllm_worktree_clean": worktree_clean,
+            "current_head": current_head,
+            "expected_old_head": old_sha,
+            "ready": worktree_clean and current_head == old_sha,
         },
     }
     timestamp = created_at or utc_now()
@@ -384,9 +390,15 @@ def apply(
     if dirty:
         raise UpstreamSyncError("vLLM worktree is dirty; refusing to move submodule")
     current = resolve_ref(repo, "HEAD")
+    planned_head = sync_plan.get("apply_preconditions", {}).get("current_head")
+    if current != planned_head:
+        raise UpstreamSyncError(
+            f"vLLM HEAD changed since plan: expected {planned_head}, got {current}"
+        )
     if current != sync_plan["old_sha"]:
         raise UpstreamSyncError(
-            f"vLLM HEAD changed since plan: expected {sync_plan['old_sha']}, got {current}"
+            "sync plan is analysis-only because vLLM HEAD did not match old-ref "
+            f"at plan time: expected {sync_plan['old_sha']}, got {current}"
         )
     git(repo, ["checkout", "--detach", sync_plan["new_sha"]])
     observed = resolve_ref(repo, "HEAD")
