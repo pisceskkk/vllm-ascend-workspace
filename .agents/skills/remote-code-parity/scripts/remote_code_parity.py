@@ -31,7 +31,7 @@ from common import (
     save_state,
     ssh_exec,
     ssh_exec_stream,
-    ssh_stream_bytes_to_file,
+    ssh_stream_file_to_file,
     ssh_stream_to_file,
     update_state,
 )
@@ -619,7 +619,7 @@ def push_snapshot_to_mirror(
     local_bundle_path = Path(local_bundle.name)
     try:
         git(repo, ['bundle', 'create', str(local_bundle_path), record.ref], timeout=DEFAULT_GIT_TRANSPORT_TIMEOUT_SECONDS)
-        ssh_stream_bytes_to_file(container, remote_bundle_path, local_bundle_path.read_bytes())
+        ssh_stream_file_to_file(container, remote_bundle_path, local_bundle_path)
         script = '\n'.join(
             [
                 'set -eo pipefail',

@@ -118,6 +118,11 @@ Required behavior:
 - avoid remote receive-pack negotiation for those parentless transport commits so the remote mirror does not need to fix up deltas against absent base history
 - also publish an advertised branch ref inside each mirror so ordinary fetch paths can see the latest synthetic snapshot
 - use a container-local lock while mutating cache or runtime state; locks carry owner metadata and stale lock directories are recovered after the bounded stale interval
+- stage oversized control scripts with bounded base64 command chunks, then
+  execute and remove the temporary file instead of relying on remote
+  command-line size or EOF-sensitive `bash -s`
+- transfer manifests and Git bundles through acknowledged sub-MTU frames and
+  require the remote SHA256 to match before mirror import
 - after failed or timed-out mirror hydration, best-effort terminate any matching legacy `git-receive-pack` process trees for that mirror and discard that repo's partial mirror before surfacing the failure
 - do not create or reuse a shared flat host path such as `/home/vaws`
 

@@ -64,6 +64,10 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 - advertised branch refs are published inside the mirror so synthetic child commits are fetchable through ordinary Git paths
 - stale container lock directories are eventually recovered instead of permanently blocking later parity attempts
 - failed or timed-out mirror hydration does not leave matching legacy `git-receive-pack` process trees or partial repo mirrors blocking later retries
+- oversized multi-repository control scripts use bounded chunk staging and
+  complete without depending on remote command-line or EOF behavior
+- multi-frame manifest and bundle transfers require per-frame acknowledgements
+  and a matching remote SHA256
 - the normal agent-facing entrypoint can resolve the target from machine inventory through `parity_sync.py`
 - the normal agent-facing entrypoint can also resolve a session target through `parity_sync.py --session-id <id>`
 - session mode reads and writes consent/runtime state under the recorded base

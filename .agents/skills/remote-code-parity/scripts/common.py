@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import base64
 import contextlib
+import hashlib
 import json
 import os
 import queue
@@ -12,6 +14,7 @@ import sys
 import tempfile
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -46,6 +49,10 @@ STATE_LOCK_SUFFIX = '.lock'
 DEFAULT_STATE_LOCK_TIMEOUT_SECONDS = 15.0
 DEFAULT_STATE_LOCK_POLL_SECONDS = 0.05
 DEFAULT_STATE_LOCK_STALE_SECONDS = 60 * 60 * 6
+DEFAULT_INLINE_SSH_SCRIPT_LIMIT_BYTES = 2048
+DEFAULT_REMOTE_SCRIPT_CHUNK_BYTES = 768
+DEFAULT_SSH_FRAME_BYTES = 768
+DEFAULT_SSH_FRAME_ACK_TIMEOUT_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -277,7 +284,13 @@ def ssh_exec(
     capture_output: bool = True,
     timeout: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
+    if len(script.encode('utf-8')) > DEFAULT_INLINE_SSH_SCRIPT_LIMIT_BYTES:
+        remote_script = _stage_remote_script(endpoint, script)
+        cleanup = f'rm -f {quoted(remote_script)}'
+        command = f"trap {quoted(cleanup)} EXIT; bash {quoted(remote_script)}"
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(command)]
+    else:
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
     return run(
         cmd,
         check=check,
@@ -293,7 +306,13 @@ def ssh_exec_stream(
     check: bool = True,
     stream_progress: bool = True,
 ) -> SshStreamingResult:
-    cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
+    if len(script.encode('utf-8')) > DEFAULT_INLINE_SSH_SCRIPT_LIMIT_BYTES:
+        remote_script = _stage_remote_script(endpoint, script)
+        cleanup = f'rm -f {quoted(remote_script)}'
+        command = f"trap {quoted(cleanup)} EXIT; bash {quoted(remote_script)}"
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(command)]
+    else:
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -388,28 +407,138 @@ def ssh_exec_stream(
 
 
 def ssh_stream_to_file(endpoint: SshEndpoint, remote_path: str, payload: str) -> None:
-    script = f'mkdir -p {quoted(str(Path(remote_path).parent))} && cat > {quoted(remote_path)}'
-    cmd = [*_ssh_base_cmd(endpoint), 'bash', '-c', shlex.quote(script)]
-    result = subprocess.run(cmd, input=payload, text=True, capture_output=True)
-    if result.returncode != 0:
-        raise RuntimeError(
-            f'failed to stream payload to {remote_path}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}'
-        )
+    ssh_stream_bytes_to_file(endpoint, remote_path, payload.encode('utf-8'))
 
 
 def ssh_stream_bytes_to_file(endpoint: SshEndpoint, remote_path: str, payload: bytes) -> None:
-    script = (
-        f'mkdir -p {quoted(str(Path(remote_path).parent))} && '
-        f'head -c {len(payload)} > {quoted(remote_path)}'
+    with tempfile.NamedTemporaryFile(prefix='vaws-parity-payload-', delete=True) as handle:
+        handle.write(payload)
+        handle.flush()
+        ssh_stream_file_to_file(endpoint, remote_path, Path(handle.name))
+
+
+def ssh_stream_file_to_file(endpoint: SshEndpoint, remote_path: str, local_path: Path) -> None:
+    receiver = (
+        'import base64,hashlib,os,sys;'
+        'p=sys.argv[1];q=p+".part";os.makedirs(os.path.dirname(p),exist_ok=True);'
+        'h=hashlib.sha256();f=open(q,"wb");'
+        'line=sys.stdin.buffer.readline();'
+        '\nwhile line and line != b".\\n":'
+        '\n d=base64.b64decode(line.rstrip(b"\\n"),validate=True);f.write(d);h.update(d);'
+        ' print("ACK",flush=True);line=sys.stdin.buffer.readline();'
+        '\nf.flush();os.fsync(f.fileno());f.close();os.replace(q,p);'
+        'print("DONE "+h.hexdigest(),flush=True)'
     )
-    cmd = [*_ssh_base_cmd(endpoint), 'bash', '-c', shlex.quote(script)]
-    result = subprocess.run(cmd, input=payload, capture_output=True)
-    if result.returncode != 0:
+    cmd = [
+        *_ssh_base_cmd(endpoint, stdin=True),
+        'python3',
+        '-c',
+        shlex.quote(receiver),
+        quoted(remote_path),
+    ]
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=False,
+        bufsize=0,
+    )
+    assert proc.stdin is not None
+    assert proc.stdout is not None
+    assert proc.stderr is not None
+
+    output_queue: queue.Queue[bytes | None] = queue.Queue()
+    stderr_parts: list[bytes] = []
+
+    def read_stdout() -> None:
+        for line in proc.stdout:
+            output_queue.put(line)
+        output_queue.put(None)
+
+    def read_stderr() -> None:
+        for chunk in iter(lambda: proc.stderr.read(4096), b''):
+            stderr_parts.append(chunk)
+
+    stdout_thread = threading.Thread(target=read_stdout, daemon=True)
+    stderr_thread = threading.Thread(target=read_stderr, daemon=True)
+    stdout_thread.start()
+    stderr_thread.start()
+
+    digest = hashlib.sha256()
+    try:
+        with local_path.open('rb') as source:
+            while True:
+                chunk = source.read(DEFAULT_SSH_FRAME_BYTES)
+                if not chunk:
+                    break
+                digest.update(chunk)
+                proc.stdin.write(base64.b64encode(chunk) + b'\n')
+                proc.stdin.flush()
+                reply = output_queue.get(timeout=DEFAULT_SSH_FRAME_ACK_TIMEOUT_SECONDS)
+                if reply != b'ACK\n':
+                    raise RuntimeError(f'unexpected SSH frame acknowledgement: {reply!r}')
+        proc.stdin.write(b'.\n')
+        proc.stdin.flush()
+        proc.stdin.close()
+        completed = output_queue.get(timeout=DEFAULT_SSH_FRAME_ACK_TIMEOUT_SECONDS)
+        expected = f'DONE {digest.hexdigest()}\n'.encode('ascii')
+        if completed != expected:
+            raise RuntimeError(f'remote checksum acknowledgement mismatch: {completed!r}')
+        returncode = proc.wait(timeout=DEFAULT_SSH_FRAME_ACK_TIMEOUT_SECONDS)
+        if returncode != 0:
+            raise RuntimeError(f'remote framed transfer exited with code {returncode}')
+    except Exception as exc:
+        proc.kill()
+        with contextlib.suppress(Exception):
+            proc.wait(timeout=5)
+        stderr = b''.join(stderr_parts).decode('utf-8', errors='replace')
+        _ssh_exec_inline(endpoint, f'rm -f {quoted(remote_path + ".part")}', check=False)
         raise RuntimeError(
-            f'failed to stream binary payload to {remote_path}\n'
-            f'stdout:\n{result.stdout.decode("utf-8", errors="replace")}\n'
-            f'stderr:\n{result.stderr.decode("utf-8", errors="replace")}'
+            f'failed to transfer {local_path} to {remote_path}: {exc}; stderr={stderr}'
+        ) from exc
+    finally:
+        stdout_thread.join(timeout=1)
+        stderr_thread.join(timeout=1)
+
+
+def _stage_remote_script(endpoint: SshEndpoint, script: str) -> str:
+    token = uuid.uuid4().hex
+    remote_path = f'/tmp/vaws-parity-script-{token}.sh'
+    encoded_path = remote_path + '.b64'
+    payload = base64.b64encode(script.encode('utf-8')).decode('ascii')
+    initialize = f'umask 077; : > {quoted(encoded_path)}'
+    _ssh_exec_inline(endpoint, initialize)
+    try:
+        for offset in range(0, len(payload), DEFAULT_REMOTE_SCRIPT_CHUNK_BYTES):
+            chunk = payload[offset : offset + DEFAULT_REMOTE_SCRIPT_CHUNK_BYTES]
+            append = f'printf %s {quoted(chunk)} >> {quoted(encoded_path)}'
+            _ssh_exec_inline(endpoint, append)
+        finalize = (
+            f'base64 -d {quoted(encoded_path)} > {quoted(remote_path)} && '
+            f'rm -f {quoted(encoded_path)}'
         )
+        _ssh_exec_inline(endpoint, finalize)
+    except Exception:
+        _ssh_exec_inline(
+            endpoint,
+            f'rm -f {quoted(encoded_path)} {quoted(remote_path)}',
+            check=False,
+        )
+        raise
+    return remote_path
+
+
+def _ssh_exec_inline(
+    endpoint: SshEndpoint,
+    script: str,
+    *,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    if len(script.encode('utf-8')) > DEFAULT_INLINE_SSH_SCRIPT_LIMIT_BYTES:
+        raise ValueError('inline SSH script exceeds the safe command limit')
+    cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
+    return run(cmd, check=check)
 
 
 def is_git_worktree(path: Path) -> bool:
