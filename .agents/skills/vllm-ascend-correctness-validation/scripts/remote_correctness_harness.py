@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -17,6 +18,28 @@ SUPPORTED_MODES = frozenset({"offline-generate", "offline-chat", "online-chat"})
 
 class HarnessError(ValueError):
     """Raised when the harness config or response is invalid."""
+
+
+def _prioritize_workspace_python_packages(
+    workspace_root: Path | None = None,
+) -> None:
+    """Keep outer repository directories from shadowing editable packages."""
+    root = workspace_root or Path(__file__).resolve().parents[4]
+    source_roots = (root / "vllm", root / "vllm-ascend")
+    source_values = [str(path) for path in source_roots if path.is_dir()]
+    for source_root in reversed(source_roots):
+        if not source_root.is_dir():
+            continue
+        value = str(source_root)
+        while value in sys.path:
+            sys.path.remove(value)
+        sys.path.insert(0, value)
+    inherited = [
+        value
+        for value in os.environ.get("PYTHONPATH", "").split(os.pathsep)
+        if value and value not in source_values
+    ]
+    os.environ["PYTHONPATH"] = os.pathsep.join([*source_values, *inherited])
 
 
 def emit_progress(phase: str, **details: Any) -> None:
@@ -110,6 +133,7 @@ def _online_request(
 
 
 def _build_offline_engine(config: Mapping[str, Any]):
+    _prioritize_workspace_python_packages()
     try:
         from vllm import LLM, SamplingParams
     except ImportError as exc:

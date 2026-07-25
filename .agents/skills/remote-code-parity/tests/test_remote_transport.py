@@ -141,6 +141,18 @@ class RemoteParityTransportTests(unittest.TestCase):
         self.assertIn("runtime-install-vllm-build-requirements", script)
         self.assertNotIn("requirements/build/cuda.txt", script)
 
+    def test_import_smoke_rejects_outer_repository_namespace(self) -> None:
+        script = parity.runtime_install_step_script(
+            runtime_root="/runtime",
+            marker_dirname=".marker",
+            container_identity="container@/runtime",
+            step="verify-imports",
+        )
+
+        self.assertIn("cd /tmp", script)
+        self.assertIn("from vllm import LLM, SamplingParams", script)
+        self.assertIn("vllm resolved to a namespace package", script)
+
 
 if __name__ == "__main__":
     unittest.main()

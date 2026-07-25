@@ -957,13 +957,17 @@ def runtime_install_step_script(
     elif step == 'verify-imports':
         lines.extend(
             [
+                'cd /tmp',
                 "$PYTHON - <<'PY'",
                 'import sys',
                 'import torch',
                 'import torch_npu  # noqa: F401',
                 'import vllm',
+                'from vllm import LLM, SamplingParams  # noqa: F401',
                 'import vllm_ascend',
-                'print(f"editable-import-smoke=ok python={sys.executable} torch={torch.__version__} vllm={getattr(vllm, \'__version__\', \'unknown\')}")',
+                'if not getattr(vllm, "__file__", None):',
+                '    raise RuntimeError("vllm resolved to a namespace package")',
+                'print(f"editable-import-smoke=ok python={sys.executable} torch={torch.__version__} vllm={getattr(vllm, \'__version__\', \'unknown\')} path={vllm.__file__}")',
                 'PY',
             ]
         )

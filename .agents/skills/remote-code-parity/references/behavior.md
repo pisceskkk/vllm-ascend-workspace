@@ -241,7 +241,7 @@ A trustworthy parity result records:
 - do not bootstrap, install, or invoke `uv` as part of parity
 - do not retry across mirror candidates or retry editable installs by dropping `--no-build-isolation`
 - if editable install fails, report the captured install log and fail closed instead of changing package sources, refreshing the packaging stack, or changing install flags
-- finish runtime verification with real imports, not `find_spec()` alone, and keep the generated heredoc smoke snippet valid Python after shell quoting
+- finish runtime verification outside the workspace root with public `LLM` / `SamplingParams` imports, reject namespace-only `vllm` resolution, and keep the generated heredoc smoke snippet valid Python after shell quoting
 - after import smoke test, verify all `vllm-ascend` declared dependencies are version-satisfied (`verify-deps`); if a mismatch is detected (e.g. `numpy<2.0.0` but `numpy 2.x` installed), report `failed` instead of running a repair install
 - surface a progress transition before each long runtime-install package step so an agent can tell whether the wait is in uninstall, requirements, editable install, or verification
 - keep consent and runtime-state writes atomic so parallel wrapper calls do not clobber local state

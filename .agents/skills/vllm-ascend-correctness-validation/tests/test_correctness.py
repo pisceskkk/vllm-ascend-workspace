@@ -6,6 +6,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -182,6 +183,33 @@ class ComparisonTests(unittest.TestCase):
 
 
 class HarnessTests(unittest.TestCase):
+    def test_workspace_source_roots_precede_outer_repo_namespace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "vllm").mkdir()
+            (root / "vllm-ascend").mkdir()
+            original = list(sys.path)
+            original_pythonpath = os.environ.get("PYTHONPATH")
+            try:
+                sys.path[:] = [str(root), str(root / "vllm"), "sentinel"]
+                os.environ["PYTHONPATH"] = f"existing{os.pathsep}{root / 'vllm'}"
+                harness._prioritize_workspace_python_packages(root)
+                self.assertEqual(
+                    sys.path[:3],
+                    [str(root / "vllm"), str(root / "vllm-ascend"), str(root)],
+                )
+                self.assertEqual(sys.path.count(str(root / "vllm")), 1)
+                self.assertEqual(
+                    os.environ["PYTHONPATH"].split(os.pathsep),
+                    [str(root / "vllm"), str(root / "vllm-ascend"), "existing"],
+                )
+            finally:
+                sys.path[:] = original
+                if original_pythonpath is None:
+                    os.environ.pop("PYTHONPATH", None)
+                else:
+                    os.environ["PYTHONPATH"] = original_pythonpath
+
     def test_online_logprobs_are_normalized(self) -> None:
         normalized = harness.normalize_online_response(
             {

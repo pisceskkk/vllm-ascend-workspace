@@ -42,6 +42,7 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 - runtime install sets bounded CMake/build parallelism through `VAWS_BUILD_JOBS`, `MAX_JOBS`, and `CMAKE_BUILD_PARALLEL_LEVEL`
 - runtime install does not run `pip install uv`, call `uv`, probe mirror candidates, or retry across indexes
 - runtime install installs `vllm/requirements/build/rust.txt` before the no-build-isolation vLLM editable install, without installing the CUDA build requirements or replacing the paired Torch stack
+- import smoke runs outside the workspace root, imports public vLLM APIs, and rejects an outer repository directory resolved as a namespace package
 - runtime install records its effective cache/compile/index env in the manifest, final summary, and runtime state with URL userinfo redacted
 - optional runtime environment metadata has a bounded timeout and cannot block parity
 

@@ -11,6 +11,7 @@
 
 - [ ] Code parity was established immediately before each remote execution.
 - [ ] Offline or online executor produced a normalized result file.
+- [ ] Offline execution and its Python subprocesses resolve the materialized packages rather than the outer `vllm/` repository namespace.
 - [ ] Service health was confirmed before online cases.
 - [ ] Repeated outputs are stable or the case is classified flaky.
 - [ ] Infrastructure and unsupported failures are not counted as product regressions.
