@@ -7,6 +7,11 @@
 - `session_create.py --disable-prepared-image-cache` keeps the raw base-image bootstrap path available.
 - Default session creation reports `verification_mode: ssh` and `npu_smoke_skipped: true` after host/container SSH checks.
 - `session_create.py --verification-mode full` keeps the full `torch` / `torch_npu` smoke check available.
+- A Session with leased NPU devices persists the exact
+  `ASCEND_RT_VISIBLE_DEVICES` through Docker, the runtime profile, dedicated
+  sshd, and container metadata.
+- Session creation and status return `needs_repair` when the observed
+  `ASCEND_RT_VISIBLE_DEVICES` differs from a non-empty lease.
 - `session_create.py` without `--session-id`, `VAWS_SESSION_ID`, or `VAWS_AGENT_SESSION_ID` generates a fresh session id instead of reusing repo-root `.vaws-local/current-session.json`.
 - Explicit `session_create.py --session-id <id> --no-worktree` does not overwrite the repo-root `.vaws-local/current-session.json`.
 - Session container SSH port allocation does not hold the lease lock while running per-port remote SSH probes.

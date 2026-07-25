@@ -33,6 +33,14 @@ manage_machine = load_manage_machine()
 
 
 class MachineManagementTransportTests(unittest.TestCase):
+    def test_bootstrap_persists_session_device_visibility(self) -> None:
+        script = manage_machine.render_bootstrap_host_script()
+
+        self.assertIn('visible_devices="${11:-}"', script)
+        self.assertIn('ASCEND_RT_VISIBLE_DEVICES=$visible_devices', script)
+        self.assertIn('SetEnv ASCEND_RT_VISIBLE_DEVICES=%s', script)
+        self.assertIn('"visible_devices": [int(item)', script)
+
     def test_staged_script_preserves_business_arguments(self) -> None:
         command = manage_machine.remote_script_command(
             "/tmp/bootstrap.sh",

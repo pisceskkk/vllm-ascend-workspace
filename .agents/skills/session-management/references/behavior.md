@@ -24,7 +24,7 @@ If a worktree already exists and is bound to the same session, it is reused. If 
 
 ## Container Behavior
 
-Session containers use the base machine image, host mounts, workdir, and Ascend bootstrap logic, but get a distinct container name and SSH port.
+Session containers use the base machine image, host mounts, workdir, and Ascend bootstrap logic, but get a distinct container name and SSH port. When NPU devices are leased, bootstrap persists the exact physical-device list as `ASCEND_RT_VISIBLE_DEVICES` in the container environment, runtime profile, dedicated sshd environment, and container metadata.
 
 The default container name is:
 
@@ -52,7 +52,11 @@ The first implementation protects:
 - service ports
 - explicitly requested or auto-counted NPU devices
 
-Session-aware serving uses the session NPU lease as its default device set. If a launch requests explicit devices, they must be contained inside the session's leased device list.
+Session bootstrap and Session-aware serving use the session NPU lease as the
+default device set. If a launch requests explicit devices, they must be
+contained inside the session's leased device list. A ready Session with a
+non-empty NPU lease must expose exactly the recorded
+`ASCEND_RT_VISIBLE_DEVICES`; visibility drift is `needs_repair`.
 
 Session creation probes host listening ports once before taking the lease lock, then selects a container SSH port from that snapshot. This avoids holding the global lease file lock across one SSH round trip per candidate port.
 
