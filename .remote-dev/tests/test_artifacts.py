@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sys
 import subprocess
 import tempfile
@@ -117,6 +118,52 @@ class ArtifactTests(unittest.TestCase):
             self.assertEqual(payload["result"]["status"], "path_traversal")
         finally:
             artifact_ops.remote_artifact_manifest = original_manifest  # type: ignore[assignment]
+
+    def test_artifact_pull_preserves_single_file_basename(self) -> None:
+        endpoint = Endpoint(host="1.2.3.4", port=46000)
+        original_manifest = artifact_ops.remote_artifact_manifest
+        original_run = artifact_ops.run_bytes
+        content = b"operator-result\n"
+        digest = hashlib.sha256(content).hexdigest()
+        try:
+            artifact_ops.remote_artifact_manifest = lambda *_args, **_kwargs: {  # type: ignore[assignment]
+                "text": "",
+                "result": {
+                    "manifest": {
+                        "status": "ok",
+                        "files": [{
+                            "relpath": ".",
+                            "path": "/remote/add-fp16-eager.json",
+                            "sha256": digest,
+                            "size": len(content),
+                        }],
+                    }
+                },
+            }
+            artifact_ops.run_bytes = lambda *_args, **_kwargs: subprocess.CompletedProcess(  # type: ignore[assignment]
+                args=["ssh"], returncode=0, stdout=content, stderr=b""
+            )
+            with tempfile.TemporaryDirectory() as tmp:
+                payload = artifact_ops.remote_artifact_pull(
+                    endpoint,
+                    remote_path="/remote/add-fp16-eager.json",
+                    local_dir=tmp,
+                )
+                pulled = payload["result"]["artifacts"][0]["pulled"][0]
+                self.assertEqual(
+                    Path(pulled["local_path"]).name,
+                    "add-fp16-eager.json",
+                )
+                self.assertEqual(
+                    (Path(tmp) / "add-fp16-eager.json").read_bytes(),
+                    content,
+                )
+                manifest_ref = Path(payload["result"]["refs"]["local_manifest"])
+                self.assertNotEqual(manifest_ref.name, "manifest.json")
+                self.assertTrue(manifest_ref.is_file())
+        finally:
+            artifact_ops.remote_artifact_manifest = original_manifest  # type: ignore[assignment]
+            artifact_ops.run_bytes = original_run  # type: ignore[assignment]
 
 
 if __name__ == "__main__":

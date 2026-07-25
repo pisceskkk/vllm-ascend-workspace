@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shlex
 import time
@@ -139,6 +140,20 @@ def _safe_local_artifact_path(base: Path, relpath: str) -> Path:
     return candidate
 
 
+def _pull_manifest_name(manifest: dict[str, Any]) -> str:
+    artifact_id = manifest.get("artifact_id")
+    if (
+        isinstance(artifact_id, str)
+        and artifact_id
+        and all(character.isalnum() or character in {"-", "_"} for character in artifact_id)
+    ):
+        return f"{artifact_id}.json"
+    digest = hashlib.sha256(
+        json.dumps(manifest, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()[:16]
+    return f"manifest-{digest}.json"
+
+
 def remote_artifact_manifest(endpoint: Endpoint, *, remote_path: str, timeout_ms: int = 120000) -> dict[str, Any]:
     started = utc_now_iso()
     start = time.monotonic()
@@ -206,8 +221,13 @@ def remote_artifact_pull(
     skipped = []
     for item in manifest.get("files", []):
         relpath = item["relpath"]
+        local_relpath = (
+            PurePosixPath(str(item["path"])).name
+            if relpath == "."
+            else str(relpath)
+        )
         try:
-            local_path = _safe_local_artifact_path(base, str(relpath))
+            local_path = _safe_local_artifact_path(base, local_relpath)
         except ValueError as exc:
             result = make_result(
                 tool="remote.artifact_pull",
@@ -258,7 +278,7 @@ def remote_artifact_pull(
             return {"text": result["summary"] + "\n", "result": result}
         os.replace(tmp, local_path)
         pulled.append({"relpath": relpath, "local_path": str(local_path), "sha256": observed, "size": item["size"]})
-    manifest_path = base / "manifest.json"
+    manifest_path = base / _pull_manifest_name(manifest)
     atomic_write_json(manifest_path, manifest)
     result = make_result(
         tool="remote.artifact_pull",
