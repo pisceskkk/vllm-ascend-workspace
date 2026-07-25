@@ -71,3 +71,6 @@ jobs:
 
       - name: Run PD-serving tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-pd-serving/tests
+
+      - name: Run upstream-sync tests
+        run: python -B -m unittest discover -s .agents/skills/vllm-ascend-upstream-sync/tests

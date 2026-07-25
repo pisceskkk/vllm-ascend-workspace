@@ -1,0 +1,4 @@
+interface:
+  display_name: "vLLM Ascend Upstream Sync"
+  short_description: "Assess and apply vLLM submodule upgrades safely"
+  default_prompt: "Use $vllm-ascend-upstream-sync to compare these vLLM refs, assess vllm-ascend compatibility risk, and prepare a guarded submodule update."

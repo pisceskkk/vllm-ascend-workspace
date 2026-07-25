@@ -65,6 +65,7 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 | `vllm-ascend-distributed-debug` | Diagnose rank topology, process-group, endpoint, collective, and distributed hang failures |
 | `ascend-operator-debug` | Reduce a model symptom to one Ascend operator call and validate an explicit input/mode matrix |
 | `vllm-ascend-pd-serving` | Orchestrate multi-session prefill/decode services, connector config, proxy health, rollback, and smoke |
+| `vllm-ascend-upstream-sync` | Compare vLLM refs, map compatibility risk to vllm-ascend consumers, and guard submodule checkout |
 
 None of these are gates for normal local coding, docs work, or unrelated Git tasks.
 For remote endpoint work, prefer `.remote-dev` tools first and use these skills
