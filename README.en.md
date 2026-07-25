@@ -45,6 +45,7 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **ascend-profiling-analysis** | Analyze collected profiler roots/manifests and generate step/layer/operator/cross-rank reports | When you need to analyze profiling output |
 | **vllm-ascend-graph-debug** | Diagnose graph-mode failures through stage classification, controlled experiments, and graph/eager intermediate-state comparison | When debugging graph compile, capture, replay, or correctness divergence |
 | **vllm-ascend-correctness-validation** | Plan and compare baseline/candidate, eager/graph, offline/online, and task-metric correctness evidence | When validating accuracy, comparing outputs, or checking correctness regressions |
+| **vllm-ascend-change-validation** | Analyze code impact, plan minimum sufficient validation, and aggregate downstream evidence into a PR report | When validating a workspace diff, commit range, or PR |
 
 
 All skills are **optional**. Use any subset, or none at all.
@@ -100,7 +101,8 @@ When talking to an Agent:
 │   │   ├── ascend-profiling-collection/ # Torch profiler collection skill
 │   │   ├── ascend-profiling-analysis/ # Profiling analysis/report skill
 │   │   ├── vllm-ascend-graph-debug/ # Graph-mode debugging skill
-│   │   └── vllm-ascend-correctness-validation/ # Correctness validation skill
+│   │   ├── vllm-ascend-correctness-validation/ # Correctness validation skill
+│   │   └── vllm-ascend-change-validation/ # Change impact and PR validation skill
 │   ├── lib/               # Shared local-state library
 │   └── scripts/           # Shared helper scripts
 ├── .cursor/rules/         # Cursor IDE specific rules

@@ -45,6 +45,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 | **ascend-profiling-analysis** | 分析已采集的 profiler root/manifest，生成 step/layer/operator/cross-rank 诊断报告 | 需要分析 profiling 结果或生成报告时 |
 | **vllm-ascend-graph-debug** | 通过阶段定性、控制变量和 graph/eager 中间状态对比定位图模式问题 | 需要排查图编译、捕获、重放或精度分歧时 |
 | **vllm-ascend-correctness-validation** | 统一规划和对比 baseline/candidate、eager/graph、离线/在线及任务指标正确性 | 需要做精度验证、输出对拍或判断正确性回退时 |
+| **vllm-ascend-change-validation** | 分析代码变更影响，生成最小充分验证计划并汇总下游证据和 PR 报告 | 需要验证工作区 diff、提交或 PR 时 |
 
 
 所有技能都是**可选的**。你可以只用其中的一部分，也可以完全不用。
@@ -101,7 +102,8 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 │   │   ├── ascend-profiling-collection/ # torch profiler 采集技能
 │   │   ├── ascend-profiling-analysis/ # profiling 分析报告技能
 │   │   ├── vllm-ascend-graph-debug/ # 图模式问题诊断技能
-│   │   └── vllm-ascend-correctness-validation/ # 正确性验证技能
+│   │   ├── vllm-ascend-correctness-validation/ # 正确性验证技能
+│   │   └── vllm-ascend-change-validation/ # 变更影响与 PR 验证技能
 │   ├── lib/               # 共享本地状态库
 │   └── scripts/           # 共享辅助脚本
 ├── .cursor/rules/         # Cursor IDE 专用规则

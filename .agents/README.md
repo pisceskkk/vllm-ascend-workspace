@@ -36,6 +36,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/ascend-profiling-analysis/` is the source-of-truth skill package for analyzing collected profiler roots/manifests and generating reports.
 - `.agents/skills/vllm-ascend-graph-debug/` is the source-of-truth skill package for graph compile, capture, replay, and graph/eager correctness diagnosis.
 - `.agents/skills/vllm-ascend-correctness-validation/` is the source-of-truth skill package for deterministic baseline/candidate, eager/graph, offline/online, and AISBench correctness comparison.
+- `.agents/skills/vllm-ascend-change-validation/` is the source-of-truth skill package for diff impact analysis, validation planning, downstream evidence linkage, and PR reports.
 - `.agents/scripts/workspace_profile.py` is the shared low-level helper for the local workspace machine profile.
 - `.agents/scripts/run_manifest.py` creates and validates shared Run Manifest v1 files.
 - `.agents/scripts/knowledge_validate.py` validates the versioned shared knowledge documents.
@@ -117,6 +118,7 @@ Current primary helpers:
 - `vllm-ascend-correctness-validation/scripts/correctness_run.py`
 - `vllm-ascend-correctness-validation/scripts/remote_correctness_harness.py`
 - `vllm-ascend-correctness-validation/scripts/aisbench_adapter.py`
+- `vllm-ascend-change-validation/scripts/change_validation.py`
 - `scripts/skill_catalog.py`
 - `scripts/run_manifest.py`
 - `scripts/knowledge_validate.py`
