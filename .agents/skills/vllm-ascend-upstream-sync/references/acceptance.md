@@ -5,6 +5,7 @@
 - [ ] Old and new refs resolve to immutable full SHAs.
 - [ ] Changed and renamed upstream paths are listed.
 - [ ] Python signature additions, removals, and changes are reported.
+- [ ] Historical invalid-escape `SyntaxWarning` messages do not pollute structured planning output.
 - [ ] vllm-ascend static consumers are linked to upstream modules or symbols.
 - [ ] Risk and recommended validation are explicit.
 - [ ] The actual HEAD and cleanliness at plan time are recorded; apply readiness is true only when that clean HEAD is the requested old ref.

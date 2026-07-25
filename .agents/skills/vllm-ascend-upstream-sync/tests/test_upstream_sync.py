@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -58,6 +59,22 @@ def write_and_commit(repo: Path, relative: str, content: str, message: str) -> s
 
 
 class UpstreamSyncTests(unittest.TestCase):
+    def test_historical_invalid_escape_warning_does_not_pollute_plan_logs(self) -> None:
+        source = r'''
+pattern = "\d"
+def parse(value):
+    return value
+'''
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter("always")
+            signatures = sync.api_signatures(source)
+            imports = sync.imported_modules(source)
+        self.assertEqual(signatures["parse"], "parse(value)")
+        self.assertEqual(imports, set())
+        self.assertFalse(
+            any(issubclass(item.category, SyntaxWarning) for item in captured)
+        )
+
     def prepare(self, root: Path) -> tuple[Path, Path, str, str]:
         vllm = root / "vllm"
         ascend = root / "vllm-ascend"

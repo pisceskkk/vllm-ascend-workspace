@@ -52,4 +52,6 @@ Read only the reference needed for the active phase:
 - Never apply when current HEAD differs from the planned old SHA.
 - Checkout only the fully resolved planned new SHA.
 - Treat static consumer detection as a risk signal, not proof of compatibility.
+- Suppress only `SyntaxWarning` emitted while parsing historical source text;
+  real syntax errors remain non-fatal unknowns for static analysis.
 - Keep reports under `.vaws-local/upstream-sync/`.

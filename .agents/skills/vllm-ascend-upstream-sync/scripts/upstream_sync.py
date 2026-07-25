@@ -10,6 +10,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -133,11 +134,17 @@ def _signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     return f"{node.name}({', '.join(parts)})"
 
 
+def _parse_python(source: str) -> ast.Module:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        return ast.parse(source)
+
+
 def api_signatures(source: str | None) -> dict[str, str]:
     if source is None:
         return {}
     try:
-        tree = ast.parse(source)
+        tree = _parse_python(source)
     except SyntaxError:
         return {}
     signatures: dict[str, str] = {}
@@ -194,7 +201,7 @@ def module_name(path: str) -> str | None:
 
 def imported_modules(source: str) -> set[str]:
     try:
-        tree = ast.parse(source)
+        tree = _parse_python(source)
     except SyntaxError:
         return set()
     modules: set[str] = set()
