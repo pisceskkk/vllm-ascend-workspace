@@ -47,6 +47,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 | **vllm-ascend-correctness-validation** | 统一规划和对比 baseline/candidate、eager/graph、离线/在线及任务指标正确性 | 需要做精度验证、输出对拍或判断正确性回退时 |
 | **vllm-ascend-change-validation** | 分析代码变更影响，生成最小充分验证计划并汇总下游证据和 PR 报告 | 需要验证工作区 diff、提交或 PR 时 |
 | **vllm-ascend-performance-regression** | 控制 baseline/candidate 交替 A/B 实验，校验配置一致性并分析波动和回退阈值 | 需要判断吞吐、延迟、HBM 等性能是否回退时 |
+| **vllm-ascend-distributed-debug** | 从拓扑、进程组、端点和逐 rank 事件定位多机多卡与 collective 故障 | 失败依赖 rank、并行拓扑、节点或分布式通信时 |
 
 
 所有技能都是**可选的**。你可以只用其中的一部分，也可以完全不用。
@@ -105,7 +106,8 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 │   │   ├── vllm-ascend-graph-debug/ # 图模式问题诊断技能
 │   │   ├── vllm-ascend-correctness-validation/ # 正确性验证技能
 │   │   ├── vllm-ascend-change-validation/ # 变更影响与 PR 验证技能
-│   │   └── vllm-ascend-performance-regression/ # A/B 性能回归技能
+│   │   ├── vllm-ascend-performance-regression/ # A/B 性能回归技能
+│   │   └── vllm-ascend-distributed-debug/ # 分布式故障诊断技能
 │   ├── lib/               # 共享本地状态库
 │   └── scripts/           # 共享辅助脚本
 ├── .cursor/rules/         # Cursor IDE 专用规则

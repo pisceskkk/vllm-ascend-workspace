@@ -47,6 +47,7 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **vllm-ascend-correctness-validation** | Plan and compare baseline/candidate, eager/graph, offline/online, and task-metric correctness evidence | When validating accuracy, comparing outputs, or checking correctness regressions |
 | **vllm-ascend-change-validation** | Analyze code impact, plan minimum sufficient validation, and aggregate downstream evidence into a PR report | When validating a workspace diff, commit range, or PR |
 | **vllm-ascend-performance-regression** | Control alternating baseline/candidate A/B experiments, enforce config parity, and assess variance and regression thresholds | When checking throughput, latency, HBM, or other performance regressions |
+| **vllm-ascend-distributed-debug** | Diagnose multi-node, multi-rank, and collective failures from topology, process groups, endpoints, and per-rank events | When a failure depends on ranks, parallel topology, nodes, or distributed communication |
 
 
 All skills are **optional**. Use any subset, or none at all.
@@ -104,7 +105,8 @@ When talking to an Agent:
 │   │   ├── vllm-ascend-graph-debug/ # Graph-mode debugging skill
 │   │   ├── vllm-ascend-correctness-validation/ # Correctness validation skill
 │   │   ├── vllm-ascend-change-validation/ # Change impact and PR validation skill
-│   │   └── vllm-ascend-performance-regression/ # A/B performance regression skill
+│   │   ├── vllm-ascend-performance-regression/ # A/B performance regression skill
+│   │   └── vllm-ascend-distributed-debug/ # Distributed failure diagnosis skill
 │   ├── lib/               # Shared local-state library
 │   └── scripts/           # Shared helper scripts
 ├── .cursor/rules/         # Cursor IDE specific rules
