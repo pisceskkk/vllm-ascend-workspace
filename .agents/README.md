@@ -36,7 +36,13 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/ascend-profiling-analysis/` is the source-of-truth skill package for analyzing collected profiler roots/manifests and generating reports.
 - `.agents/skills/vllm-ascend-graph-debug/` is the source-of-truth skill package for graph compile, capture, replay, and graph/eager correctness diagnosis.
 - `.agents/scripts/workspace_profile.py` is the shared low-level helper for the local workspace machine profile.
+- `.agents/scripts/run_manifest.py` creates and validates shared Run Manifest v1 files.
+- `.agents/scripts/knowledge_validate.py` validates the versioned shared knowledge documents.
+- `.agents/knowledge/` stores versioned compatibility, capability, validation, and failure-signature facts; unknown combinations are never assumed supported.
+- `.agents/schemas/` stores the machine-readable Run Manifest and knowledge contracts.
 - `.agents/lib/vaws_local_state.py` is the shared library for untracked local runtime state.
+- `.agents/lib/vaws_run_manifest.py` is the shared Run Manifest v1 library for domain workflow correlation and artifact links.
+- `.agents/lib/vaws_knowledge.py` is the shared knowledge validation library.
 - `.agents/lib/vaws_session_id.py` and `.agents/lib/vaws_session_state.py` are the shared libraries for session identity, state, locks, and leases.
 - `.agents/lib/vaws_remote_toolbox.py` is the shared library for remote target resolution, SSH execution, job observation, artifact streaming, sync adapters, service adapters, and cleanup.
 - `.agents/lib/vaws_validate.py` is the shared validation library for agent-facing ids, environment names, path boundaries, and NPU device lists.
@@ -107,6 +113,8 @@ Current primary helpers:
 - `ascend-profiling-analysis/scripts/profile_analyze.py`
 - `ascend-profiling-analysis/scripts/profile_sweep.py`
 - `scripts/skill_catalog.py`
+- `scripts/run_manifest.py`
+- `scripts/knowledge_validate.py`
 - `scripts/workspace_profile.py`
 - `.agents/tests/test_vaws_scaffold_safety.py`
 

@@ -33,5 +33,9 @@ jobs:
           python-version: "3.12"
       - name: Validate catalog
         run: python -B .agents/scripts/skill_catalog.py
+      - name: Validate shared knowledge
+        run: python -B .agents/scripts/knowledge_validate.py
       - name: Run catalog tests
-        run: python -B -m unittest discover -s .agents/tests -p "test_skill_catalog.py"
+        run: python -B -m unittest discover -s .agents/tests -p "test_*catalog.py"
+      - name: Run manifest and knowledge tests
+        run: python -B -m unittest discover -s .agents/tests -p "test_run_manifest.py"
