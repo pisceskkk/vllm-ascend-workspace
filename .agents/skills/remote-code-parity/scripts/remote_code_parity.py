@@ -818,7 +818,12 @@ def runtime_install_step_script(
     lines.extend(remote_runtime_env_exports())
     lines.append(f'export VAWS_RUNTIME_ROOT={quoted(runtime_root)}')
     lines.extend(DEFAULT_ENV_PREAMBLE)
-    if step in {'install-vllm', 'install-vllm-ascend', 'install-vllm-ascend-requirements'}:
+    if step in {
+        'install-vllm-build-requirements',
+        'install-vllm',
+        'install-vllm-ascend',
+        'install-vllm-ascend-requirements',
+    }:
         lines.extend(
             [
                 'emit_progress() {',
@@ -919,6 +924,13 @@ def runtime_install_step_script(
     if step == 'uninstall':
         pkg_args = ' '.join(uninstall_packages) if uninstall_packages else 'vllm vllm-ascend vllm_ascend'
         lines.append(f'$PYTHON -m pip uninstall -y {pkg_args} >/dev/null 2>&1 || true')
+    elif step == 'install-vllm-build-requirements':
+        lines.extend(
+            [
+                f'cd {quoted(str(Path(runtime_root) / "vllm"))}',
+                'pip_install_fast "runtime-install-vllm-build-requirements" "installing vllm Rust build requirements" 120 install -r requirements/build/rust.txt',
+            ]
+        )
     elif step == 'install-vllm':
         lines.extend(
             [
@@ -1686,6 +1698,18 @@ def run_sync(args: argparse.Namespace) -> int:
                             uninstall_packages=tuple(uninstall_pkgs),
                         )
                     if reinstall_vllm:
+                        emit_progress(
+                            'runtime-install-vllm-build-requirements',
+                            requirements='requirements/build/rust.txt',
+                        )
+                        run_runtime_install_step(
+                            container=container,
+                            runtime_root=runtime_root,
+                            marker_dirname=marker_dirname,
+                            container_identity=args.container_identity,
+                            step='install-vllm-build-requirements',
+                            stream_progress=True,
+                        )
                         emit_progress('runtime-install-vllm', package='vllm')
                         run_runtime_install_step(
                             container=container,

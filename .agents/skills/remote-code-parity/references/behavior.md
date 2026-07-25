@@ -233,6 +233,7 @@ A trustworthy parity result records:
 - preseed the runtime `PATH` and the Ascend driver `LD_LIBRARY_PATH` prefix, then source optional env scripts under a `set +u` / `set -u` guard so shell-specific variables are not required
 - source `/etc/profile.d/vaws-ascend-env.sh`, versioned CANN roots such as `/usr/local/Ascend/cann-9.0.0/set_env.sh`, ascend-toolkit roots, ATB, and the runtime-root-relative custom op `set_env.bash` when present
 - keep the fast path on `pip install --no-deps -e . --no-build-isolation`; editable installs must not run dependency resolution
+- before that fast path, install the upstream-declared Rust build helper from `vllm/requirements/build/rust.txt`; do not install the CUDA build requirements because they may replace the image's paired Torch stack
 - set `TORCH_DEVICE_BACKEND_AUTOLOAD=0` for the `vllm` editable install because `VLLM_TARGET_DEVICE=empty` does not need `torch_npu` during metadata generation
 - compute `VAWS_BUILD_JOBS=min(available CPUs, 128)` and export it through both `MAX_JOBS` and `CMAKE_BUILD_PARALLEL_LEVEL` so `vllm-ascend` top-level and nested CMake builds get bounded parallelism
 - keep dependency ownership in `pip install -r vllm-ascend/requirements.txt`, which pins the CANN-compatible `numpy` / `triton-ascend` stack

@@ -129,6 +129,18 @@ class RemoteParityTransportTests(unittest.TestCase):
 
         transfer.assert_called_once()
 
+    def test_vllm_install_bootstraps_declared_rust_build_requirement(self) -> None:
+        script = parity.runtime_install_step_script(
+            runtime_root="/runtime",
+            marker_dirname=".marker",
+            container_identity="container@/runtime",
+            step="install-vllm-build-requirements",
+        )
+
+        self.assertIn("requirements/build/rust.txt", script)
+        self.assertIn("runtime-install-vllm-build-requirements", script)
+        self.assertNotIn("requirements/build/cuda.txt", script)
+
 
 if __name__ == "__main__":
     unittest.main()

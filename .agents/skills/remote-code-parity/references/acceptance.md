@@ -41,6 +41,7 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 - runtime install exports persistent pip and CMake `FetchContent` cache roots outside the synced repos so normal materialization cleanups do not delete dependency caches
 - runtime install sets bounded CMake/build parallelism through `VAWS_BUILD_JOBS`, `MAX_JOBS`, and `CMAKE_BUILD_PARALLEL_LEVEL`
 - runtime install does not run `pip install uv`, call `uv`, probe mirror candidates, or retry across indexes
+- runtime install installs `vllm/requirements/build/rust.txt` before the no-build-isolation vLLM editable install, without installing the CUDA build requirements or replacing the paired Torch stack
 - runtime install records its effective cache/compile/index env in the manifest, final summary, and runtime state with URL userinfo redacted
 - optional runtime environment metadata has a bounded timeout and cannot block parity
 
