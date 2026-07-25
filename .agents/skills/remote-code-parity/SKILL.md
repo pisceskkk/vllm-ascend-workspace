@@ -29,7 +29,7 @@ Keep a **ready** remote runtime in exact code parity with the local `vllm-ascend
 - Do **not** use `scp`, `sftp`, `rsync`, `sshpass`, or `expect`.
 - Do **not** require GitHub credentials on the host or in the container.
 - Keep the sync path **container-only** after machine attach: no host storage root, no host mirror, no host lock.
-- For parallel agent work, use `parity_sync.py --session-id <id>`. Session mode derives the workspace root, container endpoint, workspace id, and container identity from `.vaws-local/sessions/<id>/session.json`.
+- For parallel agent work, use `parity_sync.py --session-id <id>`. Session mode derives the source worktree, base-repo state root, container endpoint, workspace id, and container identity from `.vaws-local/sessions/<id>/session.json`.
 - Use synthetic snapshot refs so dirty working trees can move through Git transport.
 - Keep container cache / lock / manifest paths isolated by `workspace_id` under a container-local cache root.
 - Preserve runtime-private paths under `/vllm-workspace`, in particular `Mooncake/` (image-provided runtime) and `.vaws-runtime/` (workspace-managed runtime artifacts such as profiler dumps consumed by downstream skills). The exact list lives in `DEFAULT_ROOT_PRESERVE_PATHS` in `scripts/remote_code_parity.py`.
@@ -70,6 +70,8 @@ Keep local untracked state here:
 - `.vaws-local/remote-code-parity/install-consents.json`
 - `.vaws-local/remote-code-parity/runtime-state.json`
 - `install-consents.json` and `runtime-state.json` writes must be atomic and lock-protected.
+- In Session mode, keep these control-plane files under the Session's
+  `local.base_repo_root`; use `local.worktree_root` only as the snapshot source.
 
 Container-local cache layout under the cache root:
 

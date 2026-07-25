@@ -8,7 +8,7 @@ This file defines the durable behavior of `remote-code-parity`.
 - Use Git transport without requiring a real user commit.
 - Keep sync container-only after machine attach.
 - Keep all local parity state under `.vaws-local/remote-code-parity/`.
-- In session mode, derive the source worktree and target container from `.vaws-local/sessions/<session-id>/session.json`.
+- In session mode, derive the source worktree, base-repo state root, and target container from `.vaws-local/sessions/<session-id>/session.json`.
 - Fail closed when parity cannot be proven.
 - Prove the final container-side commit ids instead of trusting command exit status alone.
 - Stream phase progress on `stderr` as `__VAWS_PARITY_PROGRESS__=<json>` and keep one final JSON payload on `stdout`.
@@ -54,7 +54,11 @@ Session-aware entrypoint:
 python3 .agents/skills/remote-code-parity/scripts/parity_sync.py --session-id <id>
 ```
 
-Session mode sets `workspace_root` to the session worktree, `workspace_id` to the session id by default, and `container_identity` to `<session-container>@<runtime-root>`.
+Session mode sets `workspace_root` to the session worktree,
+`state_repo_root` to the recorded base repository, `workspace_id` to the
+session id by default, and `container_identity` to
+`<session-container>@<runtime-root>`. Consent and runtime state stay in the base
+repository while snapshots remain isolated to the worktree.
 
 ## Preconditions
 

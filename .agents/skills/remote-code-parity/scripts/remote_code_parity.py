@@ -1305,6 +1305,7 @@ def run_plan(args: argparse.Namespace) -> int:
 
 def run_sync(args: argparse.Namespace) -> int:
     workspace_root = repo_root_from(Path(args.workspace_root))
+    state_root = repo_root_from(Path(args.state_root)) if args.state_root else workspace_root
     workspace_id = normalize_workspace_id(args.workspace_id)
     runtime_root = validate_absolute_posix_path(args.runtime_root, label='runtime root')
     container_cache_root = validate_absolute_posix_path(args.container_cache_root, label='container cache root')
@@ -1327,7 +1328,7 @@ def run_sync(args: argparse.Namespace) -> int:
             vllm_head_drift = False
             vllm_ascend_head_drift = False
 
-            prior_runtime_state = load_runtime_state(workspace_root)
+            prior_runtime_state = load_runtime_state(state_root)
             last_container_state = (
                 prior_runtime_state
                 .get('servers', {})
@@ -1552,7 +1553,7 @@ def run_sync(args: argparse.Namespace) -> int:
             if first_install:
                 current_phase = 'check-consent'
                 emit_progress(current_phase, container_identity=args.container_identity)
-                consent = resolve_install_consent(workspace_root, args.server_name, args.container_identity)
+                consent = resolve_install_consent(state_root, args.server_name, args.container_identity)
                 if consent != 'allow':
                     summary = summary_payload(
                         status='blocked',
@@ -1787,7 +1788,7 @@ def run_sync(args: argparse.Namespace) -> int:
                 current_phase = 'update-local-state'
                 emit_progress(current_phase, server_name=args.server_name)
                 update_runtime_state(
-                    repo_root=workspace_root,
+                    repo_root=state_root,
                     server_name=args.server_name,
                     container_identity=args.container_identity,
                     runtime_root=runtime_root,
@@ -1856,6 +1857,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     sync = subparsers.add_parser('sync', help='Publish container-local mirrors, materialize runtime state, and reinstall when required.')
     add_shared_arguments(sync)
+    sync.add_argument(
+        '--state-root',
+        default=None,
+        help='Local repo root for consent and runtime state; defaults to workspace-root.',
+    )
     sync.add_argument('--snapshot-id', default=None)
     sync.add_argument('--container-host', required=True)
     sync.add_argument('--container-port', type=int, required=True)

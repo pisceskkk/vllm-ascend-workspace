@@ -1622,6 +1622,7 @@ def sync_plan(target: RemoteTarget, *, mode: str, force_reinstall: bool = False)
             key: derived.get(key)
             for key in (
                 "workspace_root",
+                "state_repo_root",
                 "workspace_id",
                 "server_name",
                 "runtime_root",

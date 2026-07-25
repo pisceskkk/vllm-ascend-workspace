@@ -66,6 +66,8 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 - failed or timed-out mirror hydration does not leave matching legacy `git-receive-pack` process trees or partial repo mirrors blocking later retries
 - the normal agent-facing entrypoint can resolve the target from machine inventory through `parity_sync.py`
 - the normal agent-facing entrypoint can also resolve a session target through `parity_sync.py --session-id <id>`
+- session mode reads and writes consent/runtime state under the recorded base
+  repository while building snapshots exclusively from the session worktree
 - the skill does not create or reuse a flat shared host path such as `/home/vaws`
 
 ### Sync mode gate

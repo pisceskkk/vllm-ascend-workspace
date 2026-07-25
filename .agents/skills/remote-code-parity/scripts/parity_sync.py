@@ -79,6 +79,7 @@ def build_derived_args(repo_root: Path, args: argparse.Namespace) -> dict[str, A
     container_identity = f'{container_name}@{runtime_root}'
     return {
         'workspace_root': str(repo_root),
+        'state_repo_root': str(repo_root),
         'workspace_id': workspace_id,
         'server_name': server_name,
         'runtime_root': runtime_root,
@@ -104,6 +105,7 @@ def build_derived_args_from_session(repo_root: Path, args: argparse.Namespace) -
     remote = session['remote']
     container = remote['container']
     workspace_root = repo_root_from(Path(local['worktree_root']))
+    state_repo_root = repo_root_from(Path(local.get('base_repo_root') or repo_root))
     runtime_root = args.runtime_root or container.get('runtime_root') or container.get('workdir') or '/vllm-workspace'
     workspace_id = args.workspace_id or session.get('workspace_id') or session['session_id']
     container_name = container.get('name')
@@ -118,6 +120,7 @@ def build_derived_args_from_session(repo_root: Path, args: argparse.Namespace) -
     container_identity = f'{container_name}@{runtime_root}'
     return {
         'workspace_root': str(workspace_root),
+        'state_repo_root': str(state_repo_root),
         'workspace_id': workspace_id,
         'server_name': session['base_machine'],
         'runtime_root': runtime_root,
@@ -141,6 +144,7 @@ def build_low_level_command(derived: dict[str, Any], args: argparse.Namespace) -
         str(script_path),
         'sync',
         '--workspace-root', derived['workspace_root'],
+        '--state-root', derived['state_repo_root'],
         '--workspace-id', derived['workspace_id'],
         '--server-name', derived['server_name'],
         '--runtime-root', derived['runtime_root'],
@@ -196,7 +200,7 @@ def main() -> int:
     if not args.machine and not args.session_id and not args.session_file:
         raise RuntimeError('--machine is required unless --session-id or --session-file is used')
     derived = build_derived_args(repo_root, args)
-    state_repo_root = repo_root_from(Path(derived['workspace_root']))
+    state_repo_root = repo_root_from(Path(derived['state_repo_root']))
     low_level_cmd = build_low_level_command(derived, args)
 
     if args.print_derived_args:
