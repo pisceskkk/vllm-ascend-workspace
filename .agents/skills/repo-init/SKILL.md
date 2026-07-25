@@ -115,7 +115,7 @@ Treat this as the target only after the user approves it.
 
 | Repository | Recommended `origin` | Recommended `upstream` | Notes |
 | --- | --- | --- | --- |
-| workspace | user fork, if the user wants one | `maoxx241/vllm-ascend-workspace` | If already on the user repo, offer to add `upstream`. |
+| workspace | `pisceskkk/vllm-ascend-workspace` or user fork | `maoxx241/vllm-ascend-workspace` | Preserve the two-level fork relationship when useful. |
 | `vllm` | user fork, if one exists and the user wants it | `vllm-project/vllm` | Community-only mode is valid. |
 | `vllm-ascend` | user fork | `vllm-project/vllm-ascend` | Fork-based PR work is recommended. |
 

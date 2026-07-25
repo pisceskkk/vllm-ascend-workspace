@@ -14,7 +14,7 @@ vLLM Ascend 的开发通常需要在本地编辑代码、在远程昇腾 NPU 服
 
 ```bash
 # 克隆仓库
-git clone https://github.com/maoxx241/vllm-ascend-workspace.git
+git clone https://github.com/pisceskkk/vllm-ascend-workspace.git
 cd vllm-ascend-workspace
 
 # 初始化子模块
@@ -135,7 +135,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 
 | 仓库            | `origin`    | `upstream`                       |
 | ------------- | ----------- | -------------------------------- |
-| workspace     | 你的 Fork（可选） | `maoxx241/vllm-ascend-workspace` |
+| workspace     | `pisceskkk/vllm-ascend-workspace` 或你的 Fork | `maoxx241/vllm-ascend-workspace` |
 | `vllm`        | 你的 Fork（可选） | `vllm-project/vllm`              |
 | `vllm-ascend` | 你的 Fork     | `vllm-project/vllm-ascend`       |
 

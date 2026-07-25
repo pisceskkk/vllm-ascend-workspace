@@ -14,7 +14,7 @@ Developing vLLM Ascend typically involves editing code locally, running tests on
 
 ```bash
 # Clone the repository
-git clone https://github.com/maoxx241/vllm-ascend-workspace.git
+git clone https://github.com/pisceskkk/vllm-ascend-workspace.git
 cd vllm-ascend-workspace
 
 # Initialize submodules
@@ -134,7 +134,7 @@ Skills recommend the following topology, but never enforce it:
 
 | Repository    | `origin`             | `upstream`                       |
 | ------------- | -------------------- | -------------------------------- |
-| workspace     | Your fork (optional) | `maoxx241/vllm-ascend-workspace` |
+| workspace     | `pisceskkk/vllm-ascend-workspace` or your fork | `maoxx241/vllm-ascend-workspace` |
 | `vllm`        | Your fork (optional) | `vllm-project/vllm`              |
 | `vllm-ascend` | Your fork            | `vllm-project/vllm-ascend`       |
 
