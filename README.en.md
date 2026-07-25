@@ -44,6 +44,7 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **ascend-profiling-collection** | Collect Ascend torch-profiler data: start service, bracket profile window, run workload, remote analyse, and write a manifest | When you need kernel_details/trace_view captures |
 | **ascend-profiling-analysis** | Analyze collected profiler roots/manifests and generate step/layer/operator/cross-rank reports | When you need to analyze profiling output |
 | **vllm-ascend-graph-debug** | Diagnose graph-mode failures through stage classification, controlled experiments, and graph/eager intermediate-state comparison | When debugging graph compile, capture, replay, or correctness divergence |
+| **vllm-ascend-correctness-validation** | Plan and compare baseline/candidate, eager/graph, offline/online, and task-metric correctness evidence | When validating accuracy, comparing outputs, or checking correctness regressions |
 
 
 All skills are **optional**. Use any subset, or none at all.
@@ -98,7 +99,8 @@ When talking to an Agent:
 │   │   ├── ascend-memory-profiling/ # Memory profiling skill
 │   │   ├── ascend-profiling-collection/ # Torch profiler collection skill
 │   │   ├── ascend-profiling-analysis/ # Profiling analysis/report skill
-│   │   └── vllm-ascend-graph-debug/ # Graph-mode debugging skill
+│   │   ├── vllm-ascend-graph-debug/ # Graph-mode debugging skill
+│   │   └── vllm-ascend-correctness-validation/ # Correctness validation skill
 │   ├── lib/               # Shared local-state library
 │   └── scripts/           # Shared helper scripts
 ├── .cursor/rules/         # Cursor IDE specific rules

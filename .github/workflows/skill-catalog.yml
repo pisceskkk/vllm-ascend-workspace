@@ -41,3 +41,5 @@ jobs:
         run: python -B -m unittest discover -s .agents/tests -p "test_run_manifest.py"
       - name: Run graph-debug tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-graph-debug/tests
+      - name: Run correctness-validation tests
+        run: python -B -m unittest discover -s .agents/skills/vllm-ascend-correctness-validation/tests
