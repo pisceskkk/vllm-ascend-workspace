@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import subprocess
 import sys
 import unittest
@@ -125,6 +126,11 @@ class SshTransportTests(unittest.TestCase):
         with (
             mock.patch.object(ssh_transport.subprocess, "run", fake_run),
             mock.patch.object(
+                ssh_transport,
+                "_stage_remote_bytes",
+                return_value=("/tmp/.remote-dev-input-abc123.bin", None),
+            ) as stage,
+            mock.patch.object(
                 ssh_transport.uuid,
                 "uuid4",
                 return_value=mock.Mock(hex="abc123"),
@@ -138,16 +144,14 @@ class SshTransportTests(unittest.TestCase):
             )
 
         self.assertEqual(result.stdout, b"done")
-        self.assertEqual(len(calls), 6)
+        stage.assert_called_once()
+        self.assertEqual(stage.call_args.args[1], b"x" * 1500)
+        self.assertEqual(len(calls), 2)
         commands = [call["args"][-1] for call in calls]
-        self.assertIn(".remote-dev-input-abc123.bin", commands[0])
-        self.assertIn("base64 -d", commands[1])
-        self.assertIn("base64 -d", commands[2])
-        self.assertIn("base64 -d", commands[3])
-        self.assertIn("wc -c", commands[4])
-        self.assertIn("bash -c", commands[4])
-        self.assertIn("< /tmp/.remote-dev-input-abc123.bin", commands[4])
-        self.assertIn("rm -f", commands[5])
+        self.assertIn("wc -c", commands[0])
+        self.assertIn("bash -c", commands[0])
+        self.assertIn("< /tmp/.remote-dev-input-abc123.bin", commands[0])
+        self.assertIn("rm -f", commands[1])
         self.assertTrue(all(call["kwargs"].get("input") is None for call in calls))
 
     def test_run_bytes_stages_long_remote_command(self) -> None:
@@ -165,6 +169,11 @@ class SshTransportTests(unittest.TestCase):
 
         with (
             mock.patch.object(ssh_transport.subprocess, "run", fake_run),
+            mock.patch.object(
+                ssh_transport,
+                "_stage_remote_bytes",
+                return_value=("/tmp/.remote-dev-script-script123.bin", None),
+            ),
             mock.patch.object(
                 ssh_transport.uuid,
                 "uuid4",
@@ -191,6 +200,10 @@ class SshTransportTests(unittest.TestCase):
             if "bash /tmp/.remote-dev-script-script123.bin" in call["args"][-1]
         )
         self.assertEqual(final_call["kwargs"]["input"], b"small")
+
+    def test_staged_frame_stays_below_constrained_transport_limit(self) -> None:
+        frame = base64.b64encode(b"x" * ssh_transport.STAGED_CHUNK_BYTES) + b"\n"
+        self.assertLessEqual(len(frame), 700)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import selectors
 import shlex
 import subprocess
 import time
@@ -20,7 +21,7 @@ REMOTE_PYTHON_RUNNER = (
 )
 SAFE_DIRECT_STDIN_BYTES = 768
 SAFE_DIRECT_COMMAND_BYTES = 768
-STAGED_CHUNK_BYTES = 720
+STAGED_CHUNK_BYTES = 512
 
 
 @dataclass
@@ -50,19 +51,18 @@ def ssh_base_cmd(endpoint: Endpoint) -> list[str]:
 
 
 def run_script(endpoint: Endpoint, script: str, *, timeout_ms: int | None = None) -> RemoteCompleted:
-    timeout = None if timeout_ms is None else timeout_ms / 1000
     try:
-        proc = subprocess.run(
-            [*ssh_base_cmd(endpoint), "bash", "-s"],
-            input=script,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout,
-            check=False,
+        proc = run_bytes(
+            endpoint,
+            "bash -s",
+            stdin=script.encode("utf-8"),
+            timeout_ms=timeout_ms,
         )
-        return RemoteCompleted(proc.returncode, proc.stdout or "", proc.stderr or "")
+        return RemoteCompleted(
+            proc.returncode,
+            _decode_stream(proc.stdout),
+            _decode_stream(proc.stderr),
+        )
     except subprocess.TimeoutExpired as exc:
         stdout = _decode_stream(exc.stdout)
         stderr = _decode_stream(exc.stderr)
@@ -150,27 +150,87 @@ def _stage_remote_bytes(
     deadline: float | None,
 ) -> tuple[str, subprocess.CompletedProcess[bytes] | None]:
     remote_path = f"/tmp/.remote-dev-{kind}-{uuid.uuid4().hex}.bin"
-    init = _run_bytes_once(
-        endpoint,
-        f"umask 077; : > {shlex.quote(remote_path)}",
-        timeout_ms=_remaining_timeout_ms(deadline),
+    receiver = (
+        "import base64,sys;"
+        "f=open(sys.argv[1],'wb');"
+        "[(f.write(base64.b64decode(line)),f.flush(),print('OK',flush=True)) "
+        "for line in sys.stdin.buffer];"
+        "f.close()"
     )
-    if init.returncode != 0:
-        return remote_path, init
-    for offset in range(0, len(payload), STAGED_CHUNK_BYTES):
-        encoded = base64.b64encode(
-            payload[offset : offset + STAGED_CHUNK_BYTES]
-        ).decode("ascii")
-        append = _run_bytes_once(
-            endpoint,
-            (
-                f"printf %s {shlex.quote(encoded)} | base64 -d >> "
-                f"{shlex.quote(remote_path)}"
-            ),
-            timeout_ms=_remaining_timeout_ms(deadline),
+    command = (
+        "umask 077; exec python3 -c "
+        f"{shlex.quote(receiver)} {shlex.quote(remote_path)}"
+    )
+    proc = subprocess.Popen(
+        [*ssh_base_cmd(endpoint), f"bash -c {shlex.quote(command)}"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert proc.stdin is not None
+    assert proc.stdout is not None
+    assert proc.stderr is not None
+    selector = selectors.DefaultSelector()
+    selector.register(proc.stdout, selectors.EVENT_READ)
+    try:
+        for offset in range(0, len(payload), STAGED_CHUNK_BYTES):
+            frame = base64.b64encode(
+                payload[offset : offset + STAGED_CHUNK_BYTES]
+            ) + b"\n"
+            proc.stdin.write(frame)
+            proc.stdin.flush()
+            timeout = None
+            if deadline is not None:
+                timeout = max(0.0, deadline - time.monotonic())
+            if not selector.select(timeout):
+                proc.kill()
+                proc.wait()
+                return remote_path, subprocess.CompletedProcess(
+                    args=proc.args,
+                    returncode=124,
+                    stdout=b"",
+                    stderr=b"timed out waiting for framed transfer acknowledgement",
+                )
+            acknowledgement = proc.stdout.readline()
+            if acknowledgement != b"OK\n":
+                proc.kill()
+                stderr = proc.stderr.read()
+                proc.wait()
+                return remote_path, subprocess.CompletedProcess(
+                    args=proc.args,
+                    returncode=proc.returncode or 1,
+                    stdout=acknowledgement,
+                    stderr=stderr or b"invalid framed transfer acknowledgement",
+                )
+        proc.stdin.close()
+        proc.stdin = None
+        stdout, stderr = proc.communicate(
+            timeout=(
+                None
+                if deadline is None
+                else max(0.001, deadline - time.monotonic())
+            )
         )
-        if append.returncode != 0:
-            return remote_path, append
+    except (BrokenPipeError, subprocess.TimeoutExpired) as exc:
+        proc.kill()
+        stdout, stderr = proc.communicate()
+        if isinstance(exc, subprocess.TimeoutExpired):
+            stderr += b"timed out completing framed transfer"
+        return remote_path, subprocess.CompletedProcess(
+            args=proc.args,
+            returncode=proc.returncode or 124,
+            stdout=stdout,
+            stderr=stderr,
+        )
+    finally:
+        selector.close()
+    if proc.returncode != 0:
+        return remote_path, subprocess.CompletedProcess(
+            args=proc.args,
+            returncode=proc.returncode,
+            stdout=stdout,
+            stderr=stderr,
+        )
     return remote_path, None
 
 
