@@ -39,13 +39,14 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 | **remote-code-parity**   | 将本地工作区的完整状态（含未提交的修改）同步到远程容器                    | 在远程机器上运行测试或服务前自动触发 |
 | **modelscope**           | 下载、续传、查看进度并 SHA256 校验 ModelScope 模型权重                  | 需要把模型权重下载到明确目录时 |
 | **vllm-ascend-serving**  | 在远程容器上一键拉起 vLLM Ascend 推理服务，支持 NPU 探测、自动选卡、增量重启 | 需要在远程机器上起推理服务时     |
-| **vllm-ascend-benchmark** | 在远程容器上运行 `vllm bench serve` 性能基准测试，支持多轮预热和统计聚合     | 需要跑吞吐/延迟基准测试或性能回归对比时 |
+| **vllm-ascend-benchmark** | 对单一代码状态运行 `vllm bench serve`，支持多轮预热和统计聚合 | 需要测量当前状态的吞吐或延迟时 |
 | **ascend-memory-profiling** | 采集并分析昇腾 NPU 的 HBM 显存占用，按组件拆分并溯源 | 需要分析 vLLM 推理服务的显存占用时 |
 | **ascend-profiling-collection** | 采集 Ascend torch profiler：起服务、控制 profile 窗口、运行 workload、远端 analyse 并写 manifest | 需要采集 kernel_details/trace_view 时 |
 | **ascend-profiling-analysis** | 分析已采集的 profiler root/manifest，生成 step/layer/operator/cross-rank 诊断报告 | 需要分析 profiling 结果或生成报告时 |
 | **vllm-ascend-graph-debug** | 通过阶段定性、控制变量和 graph/eager 中间状态对比定位图模式问题 | 需要排查图编译、捕获、重放或精度分歧时 |
 | **vllm-ascend-correctness-validation** | 统一规划和对比 baseline/candidate、eager/graph、离线/在线及任务指标正确性 | 需要做精度验证、输出对拍或判断正确性回退时 |
 | **vllm-ascend-change-validation** | 分析代码变更影响，生成最小充分验证计划并汇总下游证据和 PR 报告 | 需要验证工作区 diff、提交或 PR 时 |
+| **vllm-ascend-performance-regression** | 控制 baseline/candidate 交替 A/B 实验，校验配置一致性并分析波动和回退阈值 | 需要判断吞吐、延迟、HBM 等性能是否回退时 |
 
 
 所有技能都是**可选的**。你可以只用其中的一部分，也可以完全不用。
@@ -103,7 +104,8 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 │   │   ├── ascend-profiling-analysis/ # profiling 分析报告技能
 │   │   ├── vllm-ascend-graph-debug/ # 图模式问题诊断技能
 │   │   ├── vllm-ascend-correctness-validation/ # 正确性验证技能
-│   │   └── vllm-ascend-change-validation/ # 变更影响与 PR 验证技能
+│   │   ├── vllm-ascend-change-validation/ # 变更影响与 PR 验证技能
+│   │   └── vllm-ascend-performance-regression/ # A/B 性能回归技能
 │   ├── lib/               # 共享本地状态库
 │   └── scripts/           # 共享辅助脚本
 ├── .cursor/rules/         # Cursor IDE 专用规则
@@ -155,7 +157,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 - [x] **machine-management** — 远程机器管理：添加、验证、修复、移除昇腾 NPU 服务器及托管容器
 - [x] **remote-code-parity** — 代码同步：将本地完整工作区状态（含未提交修改）同步到远程容器
 - [x] **vllm-ascend-serving** — 服务拉起：支持空闲 NPU 检测、空闲端口检测，一键拉起 vLLM Ascend 推理服务
-- [x] **vllm-ascend-benchmark** — 在线性能基准测试：支持单轮/多轮（warm-service）模式、预热轮剔除、统计聚合，多状态回归对比由 Agent 编排
+- [x] **vllm-ascend-benchmark** — 单一代码状态的在线性能测量：支持单轮/多轮（warm-service）模式、预热轮剔除和统计聚合
 - [x] **ascend-memory-profiling** — 显存 profiling：采集并分析 HBM 显存占用，按固定开销、模型权重、KV cache、HCCL、激活、runtime 拆分，支持 msprof 组件级归因
 
 ### 计划中

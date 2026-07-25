@@ -1,6 +1,6 @@
 ---
 name: vllm-ascend-benchmark
-description: Run vLLM online-serving benchmarks on a workspace-managed remote container. Use for requests like "跑个 benchmark", "对比性能", "压测一下", "测下吞吐", or "看下有没有性能回退". Do not use for accuracy tests, nightly CI matrix runs, offline inference, or service-only lifecycle.
+description: Execute and normalize one code state's vLLM online-serving benchmark on a workspace-managed remote container, including repeated measurements against one warm service. Use for requests like "跑个 benchmark", "压测一下", or "测下吞吐和延迟". Do not use for baseline-versus-candidate orchestration, regression decisions, accuracy tests, nightly CI matrices, offline inference, or service-only lifecycle.
 ---
 
 # vLLM Ascend Benchmark
@@ -15,14 +15,14 @@ compatibility backend for managed VAWS sessions.
 ## Use this skill when
 
 - the user asks to run a performance benchmark / throughput test on a managed machine
-- the user asks to compare performance before and after a code change
-- the user asks to verify there is no performance regression for a PR or commit
+- the user needs one code state's raw or statistically aggregated throughput and latency measurements
 
 ## Do not use this skill when
 
 - the task is accuracy testing (aisbench domain)
 - the task is running a full nightly CI matrix
 - the task is offline / batch inference
+- the task compares baseline and candidate code states or makes a regression decision (use `vllm-ascend-performance-regression`)
 - the user only wants to start or stop a service without benchmarking (use `vllm-ascend-serving`)
 - the machine is not yet ready in inventory (use `machine-management` first)
 
@@ -36,7 +36,7 @@ compatibility backend for managed VAWS sessions.
 - For parallel agent work, use `session-management` first and call `bench_run.py --session-id <id>`. Cleanup then stops only that session's service.
 - Progress goes to `stderr` as `__VAWS_BENCHMARK_PROGRESS__=<json>`. Final result goes to `stdout` as JSON.
 - Keep local benchmark state under `.vaws-local/benchmark/` for legacy mode and `.vaws-local/sessions/<id>/benchmark/` for session-scoped workflows.
-- **Multi-state comparisons** (e.g. baseline vs PR vs modified) are orchestrated by the agent calling `bench_run.py` once per code state, not by a single script. The agent is responsible for switching code states (via worktree, checkout, or manual edit) and running parity between each state.
+- This skill owns measurement for exactly one code state. It never switches code, schedules A/B order, compares configuration hashes, or makes a regression verdict.
 
 ## Cross-platform launcher rule
 
@@ -144,16 +144,12 @@ Multi-run output (`--runs N` where N > 1):
 }
 ```
 
-## Multi-state comparison pattern
+## Boundary with regression analysis
 
-To compare performance across code states (e.g. baseline vs PR), the agent should:
-
-1. For each code state, ensure the local workspace reflects that state (checkout, worktree, or revert).
-2. Call `bench_run.py` with `--runs N --warmup-runs M` for that state.
-3. Collect the JSON output for each state.
-4. Compare the `aggregated` metrics across states.
-
-The agent orchestrates the code-state switching and parity syncing between runs. This is more flexible and robust than a single script trying to manage git operations, because the agent can handle edge cases like cross-fork commits and submodule quirks.
+`bench_run.py` returns measurements for the current code state only. A controlled
+baseline-versus-candidate experiment, including isolated sessions, alternating
+order, configuration parity, variance policy, thresholds, and the final verdict,
+belongs to `vllm-ascend-performance-regression`.
 
 ## Reference files
 

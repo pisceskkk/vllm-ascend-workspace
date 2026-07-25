@@ -39,13 +39,14 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **remote-code-parity** | Sync the full local workspace state (including uncommitted changes) to a remote container    | Triggered automatically before remote test or service runs |
 | **modelscope**       | Download, resume, status-check, and SHA256-verify ModelScope model weights                  | When model weights need to be downloaded into an explicit local directory |
 | **vllm-ascend-serving** | Launch a vLLM Ascend inference service on a remote container, with NPU probing, auto card selection, and incremental restart | When you need an inference service on a remote machine |
-| **vllm-ascend-benchmark** | Run `vllm bench serve` performance benchmarks on a remote container, with multi-run warmup and statistical aggregation | When you need throughput/latency benchmarks or performance regression checks |
+| **vllm-ascend-benchmark** | Run `vllm bench serve` for one code state, with multi-run warmup and statistical aggregation | When measuring throughput or latency for the current state |
 | **ascend-memory-profiling** | Profile and attribute HBM memory usage on Ascend NPU, with per-component breakdown and evidence chains | When you need to analyze memory consumption of a vLLM serving workload |
 | **ascend-profiling-collection** | Collect Ascend torch-profiler data: start service, bracket profile window, run workload, remote analyse, and write a manifest | When you need kernel_details/trace_view captures |
 | **ascend-profiling-analysis** | Analyze collected profiler roots/manifests and generate step/layer/operator/cross-rank reports | When you need to analyze profiling output |
 | **vllm-ascend-graph-debug** | Diagnose graph-mode failures through stage classification, controlled experiments, and graph/eager intermediate-state comparison | When debugging graph compile, capture, replay, or correctness divergence |
 | **vllm-ascend-correctness-validation** | Plan and compare baseline/candidate, eager/graph, offline/online, and task-metric correctness evidence | When validating accuracy, comparing outputs, or checking correctness regressions |
 | **vllm-ascend-change-validation** | Analyze code impact, plan minimum sufficient validation, and aggregate downstream evidence into a PR report | When validating a workspace diff, commit range, or PR |
+| **vllm-ascend-performance-regression** | Control alternating baseline/candidate A/B experiments, enforce config parity, and assess variance and regression thresholds | When checking throughput, latency, HBM, or other performance regressions |
 
 
 All skills are **optional**. Use any subset, or none at all.
@@ -102,7 +103,8 @@ When talking to an Agent:
 │   │   ├── ascend-profiling-analysis/ # Profiling analysis/report skill
 │   │   ├── vllm-ascend-graph-debug/ # Graph-mode debugging skill
 │   │   ├── vllm-ascend-correctness-validation/ # Correctness validation skill
-│   │   └── vllm-ascend-change-validation/ # Change impact and PR validation skill
+│   │   ├── vllm-ascend-change-validation/ # Change impact and PR validation skill
+│   │   └── vllm-ascend-performance-regression/ # A/B performance regression skill
 │   ├── lib/               # Shared local-state library
 │   └── scripts/           # Shared helper scripts
 ├── .cursor/rules/         # Cursor IDE specific rules
@@ -154,7 +156,7 @@ This repository supports mainstream AI coding tools:
 - **machine-management** — Remote machine management: add, verify, repair, remove Ascend NPU servers and managed containers
 - **remote-code-parity** — Code sync: push full local workspace state (including uncommitted changes) to remote containers
 - **vllm-ascend-serving** — Service launch: idle NPU detection, idle port detection, one-click vLLM Ascend inference serving
-- **vllm-ascend-benchmark** — Online performance benchmarking: single-run / multi-run (warm-service) mode, warmup exclusion, statistical aggregation; multi-state regression comparisons orchestrated by the Agent
+- **vllm-ascend-benchmark** — Single-code-state online performance measurement: single-run / multi-run (warm-service) mode, warmup exclusion, and statistical aggregation
 - **ascend-memory-profiling** — Memory profiling: collect and analyze HBM usage, per-component breakdown (fixed overhead, weights, KV cache, HCCL, activations, runtime), with msprof component-level attribution
 
 ### Planned

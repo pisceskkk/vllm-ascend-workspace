@@ -61,6 +61,7 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 | `vllm-ascend-graph-debug` | Diagnose Ascend graph compile, capture, replay, and graph/eager correctness divergence |
 | `vllm-ascend-correctness-validation` | Plan and compare baseline/candidate, eager/graph, offline/online, and task-metric correctness evidence |
 | `vllm-ascend-change-validation` | Map code diffs to required validation evidence and aggregate downstream runs into PR reports |
+| `vllm-ascend-performance-regression` | Control alternating baseline/candidate benchmarks and assess metric regressions with variance evidence |
 
 None of these are gates for normal local coding, docs work, or unrelated Git tasks.
 For remote endpoint work, prefer `.remote-dev` tools first and use these skills

@@ -45,3 +45,5 @@ jobs:
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-correctness-validation/tests
       - name: Run change-validation tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-change-validation/tests
+      - name: Run performance-regression tests
+        run: python -B -m unittest discover -s .agents/skills/vllm-ascend-performance-regression/tests
