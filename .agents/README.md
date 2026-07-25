@@ -34,6 +34,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/ascend-memory-profiling/` is the source-of-truth skill package for profiling and attributing HBM memory usage on Ascend NPU for vLLM serving scenarios.
 - `.agents/skills/ascend-profiling-collection/` is the source-of-truth skill package for collecting Ascend torch-profiler traces and verified manifests.
 - `.agents/skills/ascend-profiling-analysis/` is the source-of-truth skill package for analyzing collected profiler roots/manifests and generating reports.
+- `.agents/skills/vllm-ascend-graph-debug/` is the source-of-truth skill package for graph compile, capture, replay, and graph/eager correctness diagnosis.
 - `.agents/scripts/workspace_profile.py` is the shared low-level helper for the local workspace machine profile.
 - `.agents/lib/vaws_local_state.py` is the shared library for untracked local runtime state.
 - `.agents/lib/vaws_session_id.py` and `.agents/lib/vaws_session_state.py` are the shared libraries for session identity, state, locks, and leases.
@@ -105,6 +106,7 @@ Current primary helpers:
 - `ascend-profiling-collection/scripts/run_remote_analyse.py`
 - `ascend-profiling-analysis/scripts/profile_analyze.py`
 - `ascend-profiling-analysis/scripts/profile_sweep.py`
+- `scripts/skill_catalog.py`
 - `scripts/workspace_profile.py`
 - `.agents/tests/test_vaws_scaffold_safety.py`
 

@@ -43,6 +43,7 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **ascend-memory-profiling** | Profile and attribute HBM memory usage on Ascend NPU, with per-component breakdown and evidence chains | When you need to analyze memory consumption of a vLLM serving workload |
 | **ascend-profiling-collection** | Collect Ascend torch-profiler data: start service, bracket profile window, run workload, remote analyse, and write a manifest | When you need kernel_details/trace_view captures |
 | **ascend-profiling-analysis** | Analyze collected profiler roots/manifests and generate step/layer/operator/cross-rank reports | When you need to analyze profiling output |
+| **vllm-ascend-graph-debug** | Diagnose graph-mode failures through stage classification, controlled experiments, and graph/eager intermediate-state comparison | When debugging graph compile, capture, replay, or correctness divergence |
 
 
 All skills are **optional**. Use any subset, or none at all.
@@ -96,7 +97,8 @@ When talking to an Agent:
 │   │   ├── vllm-ascend-benchmark/ # Performance benchmarking skill
 │   │   ├── ascend-memory-profiling/ # Memory profiling skill
 │   │   ├── ascend-profiling-collection/ # Torch profiler collection skill
-│   │   └── ascend-profiling-analysis/ # Profiling analysis/report skill
+│   │   ├── ascend-profiling-analysis/ # Profiling analysis/report skill
+│   │   └── vllm-ascend-graph-debug/ # Graph-mode debugging skill
 │   ├── lib/               # Shared local-state library
 │   └── scripts/           # Shared helper scripts
 ├── .cursor/rules/         # Cursor IDE specific rules

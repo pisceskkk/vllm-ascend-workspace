@@ -58,6 +58,7 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 | `ascend-memory-profiling` | Profile HBM memory usage on Ascend NPU for vLLM serving scenarios |
 | `ascend-profiling-collection` | Collect one Ascend torch-profiler case end-to-end (start service, bracket workload with `/start_profile` + `/stop_profile`, run `analyse()`, verify outputs, write manifest) |
 | `ascend-profiling-analysis` | Analyze collected Ascend torch-profiler roots/manifests and generate reports |
+| `vllm-ascend-graph-debug` | Diagnose Ascend graph compile, capture, replay, and graph/eager correctness divergence |
 
 None of these are gates for normal local coding, docs work, or unrelated Git tasks.
 For remote endpoint work, prefer `.remote-dev` tools first and use these skills

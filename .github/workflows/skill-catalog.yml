@@ -1,0 +1,37 @@
+name: Skill catalog
+
+on:
+  pull_request:
+    paths:
+      - ".agents/**"
+      - "AGENTS.md"
+      - "README.md"
+      - "README.en.md"
+      - ".github/workflows/skill-catalog.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".agents/**"
+      - "AGENTS.md"
+      - "README.md"
+      - "README.en.md"
+      - ".github/workflows/skill-catalog.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate catalog
+        run: python -B .agents/scripts/skill_catalog.py
+      - name: Run catalog tests
+        run: python -B -m unittest discover -s .agents/tests -p "test_skill_catalog.py"
