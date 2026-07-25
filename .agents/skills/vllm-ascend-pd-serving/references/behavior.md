@@ -13,6 +13,11 @@ most one vLLM service and each service declares:
 At least one service of each role is required. `startup_order` contains every
 service exactly once. Shutdown and rollback use the reverse order.
 
+Planning validates every group member's name, session ID, and non-empty code
+snapshot before creating lifecycle state. All member snapshots must match; a
+malformed or mixed-snapshot group is rejected as input instead of failing later
+while constructing the Run Manifest.
+
 Connector type is `nixl`, `mooncake`, or `custom`. Connector options are recorded
 for traceability, but the controller never synthesizes version-sensitive vLLM
 arguments from them; exact connector CLI JSON remains explicit in each service.

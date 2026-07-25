@@ -89,6 +89,30 @@ def config() -> dict:
 
 
 class PdServingTests(unittest.TestCase):
+    def test_rejects_group_member_without_snapshot(self) -> None:
+        invalid_group = group()
+        invalid_group["members"][0].pop("snapshot")
+
+        with self.assertRaisesRegex(
+            pd.PdServingError,
+            "snapshot must be a non-empty object",
+        ):
+            pd.validate_config(config(), invalid_group)
+
+    def test_rejects_mixed_group_snapshots(self) -> None:
+        invalid_group = group()
+        invalid_group["members"][1]["snapshot"] = {
+            "workspace_head": "different",
+            "submodules": [],
+            "dirty": False,
+        }
+
+        with self.assertRaisesRegex(
+            pd.PdServingError,
+            "share one code snapshot",
+        ):
+            pd.validate_config(config(), invalid_group)
+
     def test_requires_both_roles(self) -> None:
         invalid = config()
         invalid["services"][1]["role"] = "decode"

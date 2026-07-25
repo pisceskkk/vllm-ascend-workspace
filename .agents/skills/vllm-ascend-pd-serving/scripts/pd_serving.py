@@ -82,7 +82,41 @@ def validate_config(config: Mapping[str, Any], group: Mapping[str, Any]) -> None
         errors.append("config group_id does not match Session Group")
     if group.get("status") != "ready":
         errors.append(f"Session Group must be ready, got {group.get('status')}")
-    group_members = {member["name"]: member for member in group.get("members", [])}
+    raw_group_members = group.get("members")
+    group_members: dict[str, Mapping[str, Any]] = {}
+    snapshot_keys: set[str] = set()
+    if not isinstance(raw_group_members, list) or not raw_group_members:
+        errors.append("Session Group members must be a non-empty array")
+        raw_group_members = []
+    for index, member in enumerate(raw_group_members):
+        path = f"Session Group members[{index}]"
+        if not isinstance(member, Mapping):
+            errors.append(f"{path} must be an object")
+            continue
+        name = member.get("name")
+        session_id = member.get("session_id")
+        snapshot = member.get("snapshot")
+        if not isinstance(name, str) or not name:
+            errors.append(f"{path}.name must be a non-empty string")
+        elif name in group_members:
+            errors.append(f"Session Group member name is duplicated: {name}")
+        else:
+            group_members[name] = member
+        if not isinstance(session_id, str) or not session_id:
+            errors.append(f"{path}.session_id must be a non-empty string")
+        if not isinstance(snapshot, Mapping) or not snapshot:
+            errors.append(f"{path}.snapshot must be a non-empty object")
+        else:
+            snapshot_keys.add(
+                json.dumps(
+                    snapshot,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            )
+    if len(snapshot_keys) > 1:
+        errors.append("Session Group members must share one code snapshot")
     services = config.get("services")
     if not isinstance(services, list) or len(services) < 2:
         errors.append("services must contain at least one prefill and one decode")
