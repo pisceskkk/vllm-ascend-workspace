@@ -12,6 +12,7 @@
 - [ ] If benchmark fails, service is still stopped (force-kill if needed).
 - [ ] In session mode, `serve_start.py` and `serve_stop.py` are called with the same `--session-id`, and no machine-level serving state is touched.
 - [ ] User-provided `--serve-args` and `--bench-args` appear in the final config.
+- [ ] User-provided `--health-timeout` is forwarded unchanged to `serve_start.py`.
 - [ ] When `--refer-nightly` is given, nightly values fill in missing args only.
 - [ ] When user args AND nightly are both given, user args win.
 
@@ -33,11 +34,10 @@
 - [ ] Serving progress lines are forwarded to stderr.
 - [ ] Multi-run mode reports per-run progress with run number and warmup tag.
 
-## Multi-state comparison contract
+## Responsibility boundary
 
-- [ ] Regression comparisons must use identical `--serve-args`, `--bench-args`, `--extra-env`, and `--tp` across states.
-- [ ] Only the code state (branch / commit / worktree) changes between runs.
-- [ ] If any configuration parameter differs, the agent explicitly records the difference and labels the result as a configuration comparison.
+- [ ] The package measures one code state only.
+- [ ] It does not switch worktrees, compare code states, or emit a regression verdict.
 
 ## Configuration priority
 

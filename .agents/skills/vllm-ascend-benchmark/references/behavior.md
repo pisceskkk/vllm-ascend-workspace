@@ -49,23 +49,21 @@ The output JSON includes:
 - `aggregated`: mean + sample stddev over the non-warmup runs, for each metric key
 - `aggregated.count`: number of runs included in the statistics
 
-## Multi-State Comparison
+## Boundary with A/B experiments
 
-Comparing multiple code states (baseline, PR, modified) is **not** handled by a single benchmark script. Instead:
+This package measures exactly one code state. It does not switch worktrees,
+alternate baseline and candidate order, enforce cross-state configuration
+parity, choose regression thresholds, or produce a regression verdict.
 
-1. The agent switches the local workspace to each code state.
-2. The agent calls `bench_run.py` once per state (each call does parity sync + service lifecycle + N runs).
-3. The agent compares the returned JSON metrics across states.
+Use the separate performance-regression workflow when the question requires a
+baseline-versus-candidate conclusion. That workflow consumes this package's raw
+single-run or aggregated JSON without changing Benchmark's measurement contract.
 
-This keeps the benchmark script focused on one thing (reliable measurement) and leaves orchestration to the agent, which is better equipped to handle git worktrees, cross-fork commits, and submodule complexity.
+## Service readiness timeout
 
-### Comparison contract
-
-For performance regression comparisons, all runs must use identical core benchmark parameters (`--serve-args`, `--bench-args`, `--extra-env`, `--tp`). Only the code state should change between runs. If any configuration parameter differs, the agent must explicitly record the difference in its output and treat the result as a **configuration comparison**, not a pure regression comparison.
-
-### Regression判定
-
-Given baseline throughput `T_b` and patched throughput `T_p`, compute the ratio `r = T_p / T_b`. If `r < 0.97`, the patched version is considered a throughput regression. The same threshold applies to `acceptance_rate` when speculative decoding is enabled. TTFT and TPOT regressions use inverted comparison (`r = T_b / T_p`) since lower is better for latency metrics.
+`--health-timeout` is forwarded unchanged to `serve_start.py`. Use it for large
+models whose loading time exceeds the Serving default. It changes only how long
+Benchmark waits for readiness; it does not change measured request metrics.
 
 ## Remote Execution
 

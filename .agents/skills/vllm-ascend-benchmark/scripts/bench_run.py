@@ -69,6 +69,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tp", "--tensor-parallel-size", type=int, default=None)
     p.add_argument("--dp", "--data-parallel-size", type=int, default=None)
     p.add_argument("--port", type=int, default=None)
+    p.add_argument("--health-timeout", type=int, default=None,
+                   help="seconds to wait for service readiness")
     p.add_argument("--extra-env", action="append", default=None,
                    help="KEY=VALUE env vars for the service (repeatable)")
     p.add_argument("--refer-nightly", default=None,
@@ -163,6 +165,7 @@ def main(argv: list[str] | None = None) -> int:
             tp=args.tp,
             dp=args.dp,
             port=args.port,
+            health_timeout=args.health_timeout,
             serve_args=serve_args,
             bench_args=bench_args,
             extra_env=args.extra_env,

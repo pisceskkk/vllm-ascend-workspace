@@ -57,11 +57,13 @@ python3 .agents/skills/vllm-ascend-benchmark/scripts/bench_run.py \
   [--extra-env KEY=VALUE ...] \
   [--refer-nightly <yaml-name>] \
   [--port <N>] \
+  [--health-timeout <seconds>] \
   [--skip-parity]
 ```
 
 - `--runs`: number of benchmark iterations against the same warm service (default: 1). The service starts once and all runs hit the same warm instance.
 - `--warmup-runs`: number of initial runs to discard from aggregated statistics (default: 0). Must be less than `--runs`.
+- `--health-timeout`: override the Serving readiness timeout for large models that need longer to load.
 - `--serve-args`: extra arguments forwarded to `vllm serve` (e.g. `--async-scheduling`, `--compilation-config '...'`)
 - `--bench-args`: extra arguments forwarded to `vllm bench serve` (e.g. `--num-prompts 128`, `--max-concurrency 32`)
 - `--extra-env`: environment variables for the service (e.g. `HCCL_BUFFSIZE=1024`)

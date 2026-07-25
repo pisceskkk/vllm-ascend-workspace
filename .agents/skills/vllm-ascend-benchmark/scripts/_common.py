@@ -215,6 +215,7 @@ class BenchConfig:
     tp: int | None = None
     dp: int | None = None
     port: int | None = None
+    health_timeout: int | None = None
     serve_args: list[str] = field(default_factory=list)
     bench_args: list[str] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
@@ -236,6 +237,8 @@ class BenchConfig:
             args.extend(["--dp", str(self.dp)])
         if self.port is not None:
             args.extend(["--port", str(self.port)])
+        if self.health_timeout is not None:
+            args.extend(["--health-timeout", str(self.health_timeout)])
         for k, v in self.env.items():
             args.extend(["--extra-env", f"{k}={v}"])
         if self.skip_parity:
@@ -283,6 +286,8 @@ class BenchConfig:
             d["session_file"] = self.session_file
         if self.tp is not None:
             d["tp"] = self.tp
+        if self.health_timeout is not None:
+            d["health_timeout"] = self.health_timeout
         if self.serve_args:
             d["serve_args"] = self.serve_args
         if self.bench_args:
@@ -301,6 +306,7 @@ def assemble_config(
     tp: int | None = None,
     dp: int | None = None,
     port: int | None = None,
+    health_timeout: int | None = None,
     serve_args: list[str] | None = None,
     bench_args: list[str] | None = None,
     extra_env: list[str] | None = None,
@@ -310,6 +316,8 @@ def assemble_config(
     """Assemble a BenchConfig with user > nightly priority."""
     if not machine and not session_id and not session_file:
         raise RuntimeError("--machine is required unless --session-id or --session-file is used")
+    if health_timeout is not None and health_timeout <= 0:
+        raise RuntimeError("--health-timeout must be a positive integer")
     nightly_ref: NightlyReference | None = None
     if refer_nightly:
         nightly_ref = parse_nightly_yaml(refer_nightly)
@@ -319,6 +327,7 @@ def assemble_config(
         session_id=session_id,
         session_file=session_file,
         model=model,
+        health_timeout=health_timeout,
         skip_parity=skip_parity,
         nightly_ref=nightly_ref,
     )
