@@ -16,6 +16,7 @@
 - `bench_run.py --session-id s2` stops only `s2`'s service at cleanup time.
 - `parity_sync.py --session-id s1` derives `workspace_id=s1` and `container_identity=<s1-container>@<runtime-root>`.
 - `session_remove.py --remove-container --release-leases` can skip `serve_stop.py` when no session serving state exists and still release leases after the container is removed or the stop result is `not_found`.
+- `session_remove.py --remove-worktree` deinitializes populated submodules before asking Git to remove the worktree.
 - `session_remove.py` returns `needs_repair` instead of `removed` when requested container or worktree removal fails.
 - `session_gc.py` does not release leases for generic `failed` sessions.
 - Legacy `--machine` commands continue to work against the base machine state.

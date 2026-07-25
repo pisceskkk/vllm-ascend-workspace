@@ -40,13 +40,49 @@ def print_json(data: dict[str, Any]) -> None:
     print(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def run_git(args: list[str], *, check: bool = False) -> subprocess.CompletedProcess[str]:
+def run_git(
+    args: list[str],
+    *,
+    cwd: Path = ROOT,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["git", "-C", str(ROOT), *args],
+        ["git", "-C", str(cwd), *args],
         capture_output=True,
         text=True,
-        check=False,
+        check=check,
     )
+
+
+def remove_session_worktree(
+    worktree_root: Path,
+    *,
+    force: bool,
+    runner=run_git,
+) -> dict[str, Any]:
+    deinit: dict[str, Any] | None = None
+    if worktree_root.exists():
+        proc = runner(
+            ["submodule", "deinit", "--force", "--all"],
+            cwd=worktree_root,
+        )
+        deinit = {
+            "returncode": proc.returncode,
+            "stdout_tail": proc.stdout[-500:],
+            "stderr_tail": proc.stderr[-500:],
+        }
+
+    cmd = ["worktree", "remove"]
+    if force:
+        cmd.extend(["--force", "--force"])
+    cmd.append(str(worktree_root))
+    proc = runner(cmd, cwd=ROOT)
+    return {
+        "returncode": proc.returncode,
+        "stdout_tail": proc.stdout[-500:],
+        "stderr_tail": proc.stderr[-500:],
+        "submodule_deinit": deinit,
+    }
 
 
 def stop_session(session_id: str, *, session_file: Path | None = None, force: bool) -> dict[str, Any]:
@@ -133,16 +169,7 @@ def main() -> int:
         if args.remove_worktree:
             worktree_root = Path(session["local"]["worktree_root"])
             emit_progress("worktree", "removing session worktree", path=str(worktree_root))
-            cmd = ["worktree", "remove"]
-            if args.force:
-                cmd.extend(["--force", "--force"])
-            cmd.append(str(worktree_root))
-            proc = run_git(cmd)
-            results["worktree"] = {
-                "returncode": proc.returncode,
-                "stdout_tail": proc.stdout[-500:],
-                "stderr_tail": proc.stderr[-500:],
-            }
+            results["worktree"] = remove_session_worktree(worktree_root, force=args.force)
 
         if args.release_leases:
             can_release = stop_result_allows_lease_release(results["stop"]) or container_result_allows_lease_release(
