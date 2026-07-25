@@ -84,6 +84,7 @@ def validate_config(config: Mapping[str, Any], group: Mapping[str, Any]) -> None
         errors.append(f"Session Group must be ready, got {group.get('status')}")
     raw_group_members = group.get("members")
     group_members: dict[str, Mapping[str, Any]] = {}
+    session_ids: set[str] = set()
     snapshot_keys: set[str] = set()
     if not isinstance(raw_group_members, list) or not raw_group_members:
         errors.append("Session Group members must be a non-empty array")
@@ -104,6 +105,12 @@ def validate_config(config: Mapping[str, Any], group: Mapping[str, Any]) -> None
             group_members[name] = member
         if not isinstance(session_id, str) or not session_id:
             errors.append(f"{path}.session_id must be a non-empty string")
+        elif session_id in session_ids:
+            errors.append(
+                f"Session Group session_id is duplicated: {session_id}"
+            )
+        else:
+            session_ids.add(session_id)
         if not isinstance(snapshot, Mapping) or not snapshot:
             errors.append(f"{path}.snapshot must be a non-empty object")
         else:

@@ -4,6 +4,7 @@
 
 - [ ] Session Group is ready and all members share one code/submodule snapshot.
 - [ ] Missing member names, session IDs, or snapshots fail validation before lifecycle files are created.
+- [ ] Distinct group members cannot alias the same session ID.
 - [ ] Every service uses a unique group member.
 - [ ] Prefill and decode roles both exist.
 - [ ] Connector type, options, role-specific CLI JSON, endpoints, and ports are explicit.

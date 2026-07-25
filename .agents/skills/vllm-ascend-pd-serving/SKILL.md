@@ -5,7 +5,8 @@ description: Plan, start, inspect, smoke-test, and stop a multi-session vLLM Asc
 
 # vLLM Ascend PD Serving
 
-Operate one prefill/decode deployment across an existing Session Group. Reuse
+Operate one prefill/decode deployment across an existing Session Group whose
+members have distinct session IDs. Reuse
 single-node Serving for each vLLM process; this Skill owns only cross-service
 role configuration, ordering, proxy health, rollback, and end-to-end smoke.
 

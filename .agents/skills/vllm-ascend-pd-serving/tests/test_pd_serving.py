@@ -113,6 +113,15 @@ class PdServingTests(unittest.TestCase):
         ):
             pd.validate_config(config(), invalid_group)
 
+    def test_rejects_members_that_alias_one_session(self) -> None:
+        invalid_group = group()
+        invalid_group["members"][1]["session_id"] = invalid_group["members"][0][
+            "session_id"
+        ]
+
+        with self.assertRaisesRegex(pd.PdServingError, "session_id is duplicated"):
+            pd.validate_config(config(), invalid_group)
+
     def test_requires_both_roles(self) -> None:
         invalid = config()
         invalid["services"][1]["role"] = "decode"
