@@ -49,6 +49,7 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **vllm-ascend-performance-regression** | Control alternating baseline/candidate A/B experiments, enforce config parity, and assess variance and regression thresholds | When checking throughput, latency, HBM, or other performance regressions |
 | **vllm-ascend-distributed-debug** | Diagnose multi-node, multi-rank, and collective failures from topology, process groups, endpoints, and per-rank events | When a failure depends on ranks, parallel topology, nodes, or distributed communication |
 | **ascend-operator-debug** | Reduce a model symptom to one Ascend operator call and run an explicit dtype/shape/layout/mode reference matrix | When an operator is already suspected or a minimal operator reproducer is needed |
+| **vllm-ascend-pd-serving** | Orchestrate prefill/decode services, connector config, proxy health, rollback, and KV request smoke on a Session Group | When deploying PD disaggregation with NIXL, Mooncake, or another connector |
 
 
 All skills are **optional**. Use any subset, or none at all.
@@ -108,7 +109,8 @@ When talking to an Agent:
 │   │   ├── vllm-ascend-change-validation/ # Change impact and PR validation skill
 │   │   ├── vllm-ascend-performance-regression/ # A/B performance regression skill
 │   │   ├── vllm-ascend-distributed-debug/ # Distributed failure diagnosis skill
-│   │   └── ascend-operator-debug/ # Isolated Ascend operator diagnosis skill
+│   │   ├── ascend-operator-debug/ # Isolated Ascend operator diagnosis skill
+│   │   └── vllm-ascend-pd-serving/ # PD disaggregated serving skill
 │   ├── lib/               # Shared local-state library
 │   └── scripts/           # Shared helper scripts
 ├── .cursor/rules/         # Cursor IDE specific rules

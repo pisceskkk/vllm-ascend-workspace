@@ -68,3 +68,6 @@ jobs:
 
       - name: Run operator-debug tests
         run: python -B -m unittest discover -s .agents/skills/ascend-operator-debug/tests
+
+      - name: Run PD-serving tests
+        run: python -B -m unittest discover -s .agents/skills/vllm-ascend-pd-serving/tests
