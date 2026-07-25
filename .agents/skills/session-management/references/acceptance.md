@@ -19,3 +19,7 @@
 - `session_remove.py` returns `needs_repair` instead of `removed` when requested container or worktree removal fails.
 - `session_gc.py` does not release leases for generic `failed` sessions.
 - Legacy `--machine` commands continue to work against the base machine state.
+- A session group requires at least two unique ready sessions.
+- Group creation fails when live workspace or recursive submodule snapshots differ.
+- Startup order contains every member exactly once; shutdown order is its reverse.
+- Group teardown delegates to `session_remove.py` for every member and retains `needs_repair` when any member fails.

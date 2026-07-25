@@ -76,6 +76,7 @@ Current primary helpers:
 - `session-management/scripts/session_list.py`
 - `session-management/scripts/session_status.py`
 - `session-management/scripts/session_remove.py`
+- `session-management/scripts/session_group.py`
 - `session-management/scripts/session_gc.py`
 - `scripts/remote_target_resolve.py`
 - `scripts/remote_probe.py`

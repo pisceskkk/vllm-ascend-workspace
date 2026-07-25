@@ -62,6 +62,18 @@ When `session_remove.py --remove-container` sees no session serving state file, 
 
 `session_remove.py` marks a session `removed` only when the requested container/worktree removal succeeds. Failed removal leaves the session in `needs_repair`. `session_gc.py` releases leases for `removed` or missing-state sessions; it does not release leases for generic `failed` sessions because those may still protect partially created remote resources.
 
+## Session Groups
+
+`session_group.py create` binds existing ready sessions. It requires unique
+member names, unique session IDs, and identical live workspace plus recursive
+submodule snapshots. This prevents a distributed service from silently mixing
+code states.
+
+The caller declares startup order. Shutdown always uses the reverse order.
+`teardown` delegates each member to `session_remove.py`, continues through every
+member to maximize cleanup, and keeps the group record with `needs_repair` if any
+member fails. Grouping never duplicates leases or service state.
+
 ## Legacy Compatibility
 
 Legacy `--machine` flows continue to use the base machine container and machine-level state. Session-aware flows use `--session-id` or `--session-file` and state under `.vaws-local/sessions/<session-id>/`.

@@ -1,6 +1,6 @@
 ---
 name: session-management
-description: Create, list, inspect, remove, and garbage-collect isolated VAWS agent sessions. Use before remote execution when multiple agent tasks must run in parallel without sharing local worktrees, remote containers, serving state, or resource leases.
+description: Create, list, inspect, remove, garbage-collect, and group isolated VAWS agent sessions. Use before remote execution when tasks must not share worktrees, containers, serving state, or resource leases, or when one distributed scenario needs an ordered set of existing sessions. Do not use for service lifecycle, code sync, benchmarks, or distributed failure diagnosis.
 ---
 
 # Session Management
@@ -13,6 +13,10 @@ Each session binds:
 - one remote session container
 - one `.vaws-local/sessions/<session-id>/` state namespace
 - local leases for container SSH port, service port, and optional NPU devices
+
+A session group binds two or more ready sessions with the same code and
+submodule snapshot, plus explicit startup and reverse shutdown order. Grouping
+does not create another container or duplicate member leases.
 
 ## Use This Skill When
 
@@ -53,6 +57,20 @@ python3 .agents/skills/session-management/scripts/session_remove.py --session-id
 python3 .agents/skills/session-management/scripts/session_gc.py
 ```
 
+```bash
+python3 .agents/skills/session-management/scripts/session_group.py create \
+  --group-id <id> \
+  --member <name>=<session-id> \
+  --member <name>=<session-id> \
+  [--startup-order <name,name,...>]
+
+python3 .agents/skills/session-management/scripts/session_group.py status --group-id <id>
+python3 .agents/skills/session-management/scripts/session_group.py list
+python3 .agents/skills/session-management/scripts/session_group.py teardown \
+  --group-id <id> \
+  [--remove-containers] [--remove-worktrees] [--release-leases] [--force]
+```
+
 Progress is emitted on `stderr` as `__VAWS_SESSION_PROGRESS__=<json>`. Final output is JSON on `stdout`.
 
 By default session creation uses a host-local prepared image cache keyed by the selected base image id. The first session for a base image may still install container SSH packages, then commits `vaws-session-prepared:<image-hash>-ssh-v2`; later sessions start from that prepared image and skip the repeated `openssh` package install and cached pip/pytest bootstrap. Use `--disable-prepared-image-cache` only when validating raw base-image bootstrap behavior.
@@ -69,6 +87,7 @@ Local untracked state lives under `.vaws-local/sessions/`:
 - `<session-id>/session.json`
 - `<session-id>/serving.json`
 - `<session-id>/benchmark/`
+- `groups/<group-id>/group.json`
 
 Worktree bindings are written to `<worktree>/.vaws-local/current-session.json` and include the absolute base session file path so scripts run from the worktree can find the base session state.
 

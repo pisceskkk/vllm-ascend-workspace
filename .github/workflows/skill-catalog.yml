@@ -57,6 +57,12 @@ jobs:
       - name: Run serving tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-serving/tests
 
+      - name: Run session-management tests
+        run: python -B -m unittest discover -s .agents/skills/session-management/tests
+
+      - name: Validate parameterized Ray helpers
+        run: bash -n scripts/ray_head.sh scripts/ray_worker.sh
+
       - name: Run distributed-debug tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-distributed-debug/tests
 
