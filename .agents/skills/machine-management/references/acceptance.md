@@ -69,6 +69,7 @@ These should not trigger `machine-management` unless machine readiness is the ob
 - the skill configures a dedicated container `sshd` on a high port without brittle inline edits to `/etc/ssh/sshd_config`
 - the container bootstrap ensures `/run/sshd` exists
 - space-containing remote arguments such as SSH public keys and mesh peer keys survive the SSH hop intact
+- bootstrap scripts larger than the endpoint's safe direct-stdin budget are staged with bounded SSH commands, execute without hanging, and receive the same positional arguments as the direct `bash -s --` path
 - when the shared bootstrap helper's prepared-image cache is not requested, `machine_add.py` and `machine_repair.py` keep raw selected-image bootstrap behavior
 - when a caller explicitly requests the prepared-image cache, the helper reports `prepared_image`, `used_prepared_image_cache`, and `created_prepared_image_cache` in the bootstrap payload
 - `machine_add.py` persists final alias, namespace, host identity, container name, image, and SSH port into inventory without the agent having to call `inventory.py put`

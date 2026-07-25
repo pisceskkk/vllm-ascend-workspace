@@ -11,6 +11,7 @@ subcommands print JSON.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import pathlib
@@ -26,6 +27,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from dataclasses import dataclass
 from typing import Any, Sequence
 
@@ -78,6 +80,8 @@ DEFAULT_PROBE_TIMEOUT_SECONDS = 60
 DEFAULT_BOOTSTRAP_TIMEOUT_SECONDS = 1800
 DEFAULT_SMOKE_TIMEOUT_SECONDS = 240
 DEFAULT_REMOTE_TIMEOUT_GRACE_SECONDS = 8
+SAFE_DIRECT_SCRIPT_BYTES = 768
+STAGED_SCRIPT_CHUNK_BYTES = 720
 ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 SEMVER_TAG_PATTERN = re.compile(
     r"^v?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:(?P<kind>rc)(?P<kind_number>\d+))?$",
@@ -761,12 +765,24 @@ def run_remote_script(
     timeout_seconds: int | None = None,
     stream_progress: bool = True,
 ) -> RemoteResult:
-    remote_cmd = remote_shell_command(["bash", "-s", "--", *args])
+    remote_script: str | None = None
+    script_bytes = script.encode("utf-8")
+    if len(script_bytes) > SAFE_DIRECT_SCRIPT_BYTES:
+        remote_script = stage_remote_script(
+            target,
+            script_bytes,
+            batch_mode=batch_mode,
+        )
+        remote_cmd = remote_script_command(remote_script, args)
+        stdin_source: int | None = subprocess.DEVNULL
+    else:
+        remote_cmd = remote_script_command(None, args)
+        stdin_source = subprocess.PIPE
     cmd = ssh_command(target, batch_mode=batch_mode) + [remote_cmd]
     try:
         proc = subprocess.Popen(
             list(cmd),
-            stdin=subprocess.PIPE,
+            stdin=stdin_source,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -774,13 +790,20 @@ def run_remote_script(
             errors="replace",
         )
     except FileNotFoundError as exc:
+        if remote_script is not None:
+            remove_remote_file(
+                target,
+                remote_script,
+                batch_mode=batch_mode,
+            )
         raise MachineManagementError(
             f"required local command not found: {cmd[0]}"
         ) from exc
 
-    assert proc.stdin is not None
-    proc.stdin.write(script)
-    proc.stdin.close()
+    if remote_script is None:
+        assert proc.stdin is not None
+        proc.stdin.write(script)
+        proc.stdin.close()
 
     q: queue.Queue[tuple[str, str | None]] = queue.Queue()
     stdout_parts: list[str] = []
@@ -864,6 +887,12 @@ def run_remote_script(
 
     stdout = "".join(stdout_parts)
     stderr = "".join(stderr_parts)
+    if remote_script is not None:
+        remove_remote_file(
+            target,
+            remote_script,
+            batch_mode=batch_mode,
+        )
     return RemoteResult(
         target=target,
         returncode=proc.returncode or 0,
@@ -874,6 +903,106 @@ def run_remote_script(
         timeout_seconds=timeout_seconds,
         progress_events=progress_events,
     )
+
+
+def remote_script_command(
+    remote_script: str | None,
+    args: Sequence[str],
+) -> str:
+    if remote_script is None:
+        return remote_shell_command(["bash", "-s", "--", *args])
+    return remote_shell_command(["bash", remote_script, *args])
+
+
+def run_remote_command_once(
+    target: SshTarget,
+    command: str,
+    *,
+    batch_mode: bool,
+    timeout_seconds: int = 30,
+) -> subprocess.CompletedProcess[str]:
+    cmd = ssh_command(target, batch_mode=batch_mode) + [command]
+    try:
+        return subprocess.run(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise MachineManagementError(
+            f"required local command not found: {cmd[0]}"
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise MachineManagementError(
+            f"remote script staging timed out after {timeout_seconds}s"
+        ) from exc
+
+
+def stage_remote_script(
+    target: SshTarget,
+    script: bytes,
+    *,
+    batch_mode: bool,
+) -> str:
+    remote_path = f"/tmp/.vaws-remote-script-{uuid.uuid4().hex}.sh"
+    quoted_path = shlex.quote(remote_path)
+    init = run_remote_command_once(
+        target,
+        f"umask 077; : > {quoted_path}",
+        batch_mode=batch_mode,
+    )
+    if init.returncode != 0:
+        detail = init.stderr.strip() or init.stdout.strip() or "initialization failed"
+        raise MachineManagementError(f"could not stage remote script: {detail}")
+    try:
+        for offset in range(0, len(script), STAGED_SCRIPT_CHUNK_BYTES):
+            encoded = base64.b64encode(
+                script[offset : offset + STAGED_SCRIPT_CHUNK_BYTES]
+            ).decode("ascii")
+            append = run_remote_command_once(
+                target,
+                (
+                    f"printf %s {shlex.quote(encoded)} | base64 -d >> "
+                    f"{quoted_path}"
+                ),
+                batch_mode=batch_mode,
+            )
+            if append.returncode != 0:
+                detail = (
+                    append.stderr.strip()
+                    or append.stdout.strip()
+                    or "chunk upload failed"
+                )
+                raise MachineManagementError(
+                    f"could not stage remote script: {detail}"
+                )
+    except Exception:
+        remove_remote_file(target, remote_path, batch_mode=batch_mode)
+        raise
+    return remote_path
+
+
+def remove_remote_file(
+    target: SshTarget,
+    remote_path: str,
+    *,
+    batch_mode: bool,
+) -> None:
+    try:
+        run_remote_command_once(
+            target,
+            f"rm -f {shlex.quote(remote_path)}",
+            batch_mode=batch_mode,
+            timeout_seconds=10,
+        )
+    except MachineManagementError:
+        pass
 
 
 def compact_failure_tail(

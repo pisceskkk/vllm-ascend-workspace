@@ -182,6 +182,10 @@ The shared bootstrap helper also supports an opt-in prepared image cache for ses
 
 The container bootstrap must ensure `/run/sshd` exists before starting the dedicated daemon.
 Remote-script arguments that may contain spaces, such as SSH public keys or mesh peer keys, must survive the local -> ssh -> remote-shell hop intact. Do not rely on raw argv joining for those values.
+When an SSH endpoint cannot reliably accept a large stdin payload, stage the
+bootstrap script through bounded commands and execute the staged file. Preserve
+the same positional-argument contract as `bash -s --`; the transport detail
+must not add a synthetic business argument.
 
 
 ## Smoke contract
