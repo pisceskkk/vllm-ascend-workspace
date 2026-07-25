@@ -1,11 +1,26 @@
 ---
 name: vllm-ascend-graph-debug
-description: "定位 vLLM Ascend 图模式(cudagraph/ACL Graph)问题。通过记录已知事实、阶段定性、控制变量、逐步缩小范围，以及 graph/eager 中间 tensor 快照对比来定位精度、捕获和重放问题。"
+description: Diagnose vLLM Ascend cudagraph and ACL Graph compile, capture, replay, hang, and graph-versus-eager correctness problems. Use when eager passes but graph mode fails, hangs, or diverges; when graph capture or replay is suspected; or when intermediate tensor snapshots must be aligned by step, layer, rank, and tag. Do not use when eager itself fails, for general performance profiling, or for HBM attribution.
 ---
 
 # NPU Graph Debug
 
 用于排查 vLLM Ascend 图模式下的编译、捕获、重放和精度问题。核心方法是：记录已知信息，先定性问题阶段，再控制变量缩小范围；只有范围足够小时，才插入预分配 buffer，通过图内 `copy_` 和图外落盘对比 graph/eager 的中间状态。
+
+## 结构化入口
+
+从仓库根目录使用 `scripts/graph_debug_case.py`：
+
+1. `init` 创建 `.vaws-local/graph-debug/<case-id>/case.json` 和 Run Manifest v1。
+2. 每轮单变量实验后立即用 `record` 追加假设、预期、观测、结论和下一步。
+3. 需要中间状态对拍时，用 `compare` 对齐 eager/graph JSONL snapshot 并找到首个分叉。
+4. 修复后用 `finalize` 同时记录最小复现、原始复现和 instrumentation 清理状态。
+
+按需读取：
+
+- [Behavior contract](references/behavior.md)：case 生命周期、snapshot schema、比较语义和 Run Manifest 集成。
+- [Command recipes](references/command-recipes.md)：可复制的 init、record、compare、finalize 命令。
+- [Acceptance](references/acceptance.md)：结案前必须逐项满足的验收条件。
 
 ## 工作原则
 
@@ -15,30 +30,9 @@ description: "定位 vLLM Ascend 图模式(cudagraph/ACL Graph)问题。通过�
 4. 精度排查优先固定随机性和输入；性能、吞吐、并发压力只在问题需要时引入。
 5. 图内只做设备侧、可 capture 的操作；同步、CPU 读回、文件写入统一放到图外。
 
-## 记录模板
+## 记录要求
 
-排查过程中维护一份简短记录，可以写在 debug 目录、issue、PR comment 或临时笔记中。每完成一次实验就追加一条：
-
-```markdown
-## Graph Debug Notes
-
-### 已知事实
-- Eager: pass/fail，命令摘要，输入摘要，输出摘要
-- Graph: pass/fail，命令摘要，输入摘要，输出摘要
-- 环境: 机器/镜像/驱动/CANN/torch/torch_npu/vLLM/vLLM Ascend 版本
-- 确定性设置: seed、采样参数、HCCL_DETERMINISTIC、torch deterministic
-
-### 当前结论
-- 问题阶段: compile / capture / replay / accuracy / unknown
-- 已排除: ...
-- 当前最小复现: ...
-- 当前嫌疑: ...
-
-### 实验记录
-| 序号 | 改动变量 | 预期 | 结果 | 结论 | 下一步 |
-|------|----------|------|------|------|--------|
-| 1 | ... | ... | ... | ... | ... |
-```
+不要使用散落的临时笔记作为唯一事实来源。以 case 目录中的 `case.json` 为结构化记录；issue 或 PR comment 可以引用它的摘要。每次实验完成后立即运行 `record`，并保持“已知事实 / 已排除 / 当前嫌疑 / 下一步”与 case 内容一致。
 
 ## 总流程
 
@@ -235,4 +229,5 @@ export HCCL_DETERMINISTIC=true
 1. 删除或关闭 debug buffer、同步、落盘、确定性调试开关。
 2. 用最小复现验证修复。
 3. 用原始复现验证问题不再出现。
-4. 在记录中写清根因、修复点、已验证场景、仍未覆盖的风险。
+4. 运行 `finalize`，写清根因、修复点、已验证场景和仍未覆盖的风险。
+5. 对照 [Acceptance](references/acceptance.md) 验证 `case.json`、comparison artifacts 和 Run Manifest。

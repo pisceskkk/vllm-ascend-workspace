@@ -39,3 +39,5 @@ jobs:
         run: python -B -m unittest discover -s .agents/tests -p "test_*catalog.py"
       - name: Run manifest and knowledge tests
         run: python -B -m unittest discover -s .agents/tests -p "test_run_manifest.py"
+      - name: Run graph-debug tests
+        run: python -B -m unittest discover -s .agents/skills/vllm-ascend-graph-debug/tests

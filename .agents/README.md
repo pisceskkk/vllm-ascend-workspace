@@ -112,6 +112,7 @@ Current primary helpers:
 - `ascend-profiling-collection/scripts/run_remote_analyse.py`
 - `ascend-profiling-analysis/scripts/profile_analyze.py`
 - `ascend-profiling-analysis/scripts/profile_sweep.py`
+- `vllm-ascend-graph-debug/scripts/graph_debug_case.py`
 - `scripts/skill_catalog.py`
 - `scripts/run_manifest.py`
 - `scripts/knowledge_validate.py`
