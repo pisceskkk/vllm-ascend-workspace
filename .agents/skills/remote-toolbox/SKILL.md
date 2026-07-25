@@ -1,6 +1,6 @@
 ---
 name: remote-toolbox
-description: Resolve, probe, execute, observe jobs, sync, manage service lifecycle, transfer artifacts, and clean VAWS remote Ascend session containers through structured agent-facing CLI entrypoints.
+description: Execute ad hoc structured operations against an already-managed VAWS remote container, including target resolution, remote facts, one-off commands or jobs, named artifact transfer, and job cleanup. Use only when no domain workflow owns the requested remote operation. Do not use for machine setup, session lifecycle, code parity, serving, benchmarks, correctness, profiling, or domain debugging with a dedicated Skill.
 ---
 
 # VAWS Remote Toolbox

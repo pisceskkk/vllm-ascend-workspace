@@ -164,14 +164,20 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 - [x] **repo-init** — 工作区初始化：GitHub CLI 安装、认证、子模块、Fork 与远程仓库拓扑配置
 - [x] **machine-management** — 远程机器管理：添加、验证、修复、移除昇腾 NPU 服务器及托管容器
 - [x] **remote-code-parity** — 代码同步：将本地完整工作区状态（含未提交修改）同步到远程容器
+- [x] **session-management** — 单 Session 隔离与同快照 Session Group、顺序启动和反向清理
 - [x] **vllm-ascend-serving** — 服务拉起：支持空闲 NPU 检测、空闲端口检测，一键拉起 vLLM Ascend 推理服务
 - [x] **vllm-ascend-benchmark** — 单一代码状态的在线性能测量：支持单轮/多轮（warm-service）模式、预热轮剔除和统计聚合
 - [x] **ascend-memory-profiling** — 显存 profiling：采集并分析 HBM 显存占用，按固定开销、模型权重、KV cache、HCCL、激活、runtime 拆分，支持 msprof 组件级归因
+- [x] **ascend-profiling-collection / analysis** — Profiling 采集、规范化、跨 rank 分析和证据化报告
+- [x] **graph / correctness / change validation** — 图模式诊断、AISBench 适配、正确性对拍、变更影响与 PR 报告 MVP
+- [x] **performance / distributed / operator** — A/B 性能判定、逐 rank 证据分析和单算子矩阵 MVP
+- [x] **PD Serving / Upstream Sync** — 多 Session PD 生命周期、代理请求 smoke，以及 vLLM 升级风险与受控指针更新
 
 ### 计划中
 
-- [ ] **精度测试与 aisbench 集成** — 基于 aisbench 的自动化评测，支持 HTML 报告自动分析、系统调度评估及 DP 均衡度分析
-- [ ] **性能 Profiling 分析** — 自动分析模型主要算子耗时，热点算子 AIC/AIV/MTE2 ratio 分析，AICPU 算子识别，host bound 识别与诊断
+- [ ] **真实硬件验收扩展** — 在目标模型、NPU 拓扑、PD connector 和长时 A/B 场景执行 acceptance，补齐现场故障样本
+- [ ] **社区 Model Adapter 接入** — 仅复用或适配可验证的社区 Skill，不在 workspace 内重复实现模型适配方法论
+- [ ] **PD 代理生命周期与 connector 指标** — 在不复制通用进程管理的前提下接入可验证的代理 adapter 和 KV transfer 指标
 - [ ] **同步打断优化** — 针对具体 case 提供异步拷贝掩盖方案，减少同步等待开销
 - [ ] **计算图分析** — 构建模型计算图，提供基于计算图的理论性能评估报告及优化方案
 - [ ] **外置知识库接入** — 接入外部知识库，扩展 Agent 的能力边界

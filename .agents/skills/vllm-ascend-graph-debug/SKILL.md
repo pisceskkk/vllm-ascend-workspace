@@ -1,6 +1,6 @@
 ---
 name: vllm-ascend-graph-debug
-description: Diagnose vLLM Ascend cudagraph and ACL Graph compile, capture, replay, hang, and graph-versus-eager correctness problems. Use when eager passes but graph mode fails, hangs, or diverges; when graph capture or replay is suspected; or when intermediate tensor snapshots must be aligned by step, layer, rank, and tag. Do not use when eager itself fails, for general performance profiling, or for HBM attribution.
+description: Diagnose vLLM Ascend cudagraph and ACL Graph compile, capture, replay, hang, and graph-versus-eager correctness problems. Use when eager passes but graph mode fails, hangs, or diverges, or when graph/eager intermediate tensors must be aligned. Do not use to plan a correctness matrix, after the failure is reduced to one operator, when eager itself fails, or for performance profiling or HBM attribution.
 ---
 
 # NPU Graph Debug

@@ -1,7 +1,7 @@
 <!-- Generated Claude Code shim from .agents/skills/vllm-ascend-benchmark/SKILL.md. Do not edit. -->
 ---
 name: vllm-ascend-benchmark
-description: Run vLLM online-serving benchmarks on a workspace-managed remote container. Use for requests like "跑个 benchmark", "对比性能", "压测一下", "测下吞吐", or "看下有没有性能回退". Do not use for accuracy tests, nightly CI matrix runs, offline inference, or service-only lifecycle.
+description: Execute and normalize one code state's vLLM online-serving benchmark on a workspace-managed remote container, including repeated measurements against one warm service. Use for requests like "跑个 benchmark", "压测一下", or "测下吞吐和延迟". Do not use for baseline-versus-candidate orchestration, regression decisions, accuracy tests, nightly CI matrices, offline inference, or service-only lifecycle.
 ---
 
 # vLLM Ascend Benchmark

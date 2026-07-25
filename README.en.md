@@ -163,14 +163,20 @@ This repository supports mainstream AI coding tools:
 - **repo-init** — Workspace initialization: GitHub CLI install, auth, submodules, fork & remote topology
 - **machine-management** — Remote machine management: add, verify, repair, remove Ascend NPU servers and managed containers
 - **remote-code-parity** — Code sync: push full local workspace state (including uncommitted changes) to remote containers
+- **session-management** — Isolated sessions plus same-snapshot Session Groups with ordered startup and reverse cleanup
 - **vllm-ascend-serving** — Service launch: idle NPU detection, idle port detection, one-click vLLM Ascend inference serving
 - **vllm-ascend-benchmark** — Single-code-state online performance measurement: single-run / multi-run (warm-service) mode, warmup exclusion, and statistical aggregation
 - **ascend-memory-profiling** — Memory profiling: collect and analyze HBM usage, per-component breakdown (fixed overhead, weights, KV cache, HCCL, activations, runtime), with msprof component-level attribution
+- **ascend-profiling-collection / analysis** — Profiling collection, normalization, cross-rank analysis, and evidence-linked reports
+- **graph / correctness / change validation** — Graph diagnosis, AISBench adapter, output comparison, change impact, and PR report MVP
+- **performance / distributed / operator** — A/B decisions, per-rank evidence analysis, and isolated operator matrix MVP
+- **PD Serving / Upstream Sync** — Multi-session PD lifecycle, proxy request smoke, and guarded vLLM upgrade assessment
 
 ### Planned
 
-- **Accuracy testing & aisbench integration** — Automated evaluation based on aisbench, with HTML report analysis, system scheduling assessment, and DP balance analysis
-- **Performance profiling** — Automatic operator latency breakdown, hot operator AIC/AIV/MTE2 ratio analysis, AICPU operator identification, host bound detection and diagnosis
+- **Real-hardware acceptance expansion** — Run acceptance on target models, NPU topologies, PD connectors, and long A/B experiments; add field failure samples
+- **Community Model Adapter integration** — Reuse or adapt a verifiable community Skill instead of reimplementing model onboarding methodology
+- **PD proxy lifecycle and connector metrics** — Integrate a verifiable proxy adapter and KV-transfer metrics without duplicating generic process management
 - **Sync-break optimization** — Provide async copy overlap strategies for specific cases to reduce synchronization overhead
 - **Compute graph analysis** — Build model compute graphs, generate theoretical performance evaluation reports and optimization recommendations
 - **External knowledge base** — Integrate external knowledge sources to extend Agent capabilities

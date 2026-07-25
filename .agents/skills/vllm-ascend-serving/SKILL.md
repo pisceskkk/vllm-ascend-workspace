@@ -1,6 +1,6 @@
 ---
 name: vllm-ascend-serving
-description: Start, check, or stop a single-node vLLM Ascend online service on a workspace-managed ready remote container. Use for requests like "拉服务", "在远端起个服务", "重启服务", "看服务状态", "停掉服务". Do not use for machine attach, environment bootstrap, code sync, benchmark orchestration, or offline inference.
+description: Start, check, or stop one colocated vLLM Ascend online service on one workspace-managed ready remote container. Use for requests like "拉服务", "重启服务", "看服务状态", or "停掉服务". Do not use for PD prefill/decode orchestration, machine setup, code sync, benchmarks, or offline inference.
 ---
 
 # vLLM Ascend Serving

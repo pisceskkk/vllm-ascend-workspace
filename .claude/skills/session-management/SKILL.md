@@ -1,7 +1,7 @@
 <!-- Generated Claude Code shim from .agents/skills/session-management/SKILL.md. Do not edit. -->
 ---
 name: session-management
-description: Create, list, inspect, remove, and garbage-collect isolated VAWS agent sessions. Use before remote execution when multiple agent tasks must run in parallel without sharing local worktrees, remote containers, serving state, or resource leases.
+description: Create, list, inspect, remove, garbage-collect, and group isolated VAWS agent sessions. Use before remote execution when tasks must not share worktrees, containers, serving state, or resource leases, or when one distributed scenario needs an ordered set of existing sessions. Do not use for service lifecycle, code sync, benchmarks, or distributed failure diagnosis.
 ---
 
 # Session Management
