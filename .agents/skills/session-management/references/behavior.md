@@ -62,6 +62,10 @@ When `session_remove.py --remove-container` sees no session serving state file, 
 
 `session_remove.py` marks a session `removed` only when the requested container/worktree removal succeeds. Failed removal leaves the session in `needs_repair`. `session_gc.py` releases leases for `removed` or missing-state sessions; it does not release leases for generic `failed` sessions because those may still protect partially created remote resources.
 
+If remote cleanup raises before normal result aggregation, Session removal still
+persists `needs_repair` and keeps every lease. A transport exception must not
+leave an unreachable Session advertised as `ready`.
+
 ## Session Groups
 
 `session_group.py create` binds existing ready sessions. It requires unique

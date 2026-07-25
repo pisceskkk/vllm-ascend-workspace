@@ -130,6 +130,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
+    lookup = None
+    sid: str | None = None
     try:
         if not args.session_id and not args.session_file:
             print_json(
@@ -207,7 +209,24 @@ def main() -> int:
         print_json({"status": updated["status"], "session_id": sid, "results": results})
         return 0 if updated["status"] in {"removed", "stopped"} else 1
     except Exception as exc:
-        print_json({"status": "failed", "error": str(exc)})
+        payload: dict[str, Any] = {"status": "failed", "error": str(exc)}
+        if lookup is not None and sid is not None:
+            try:
+                updated = mark_session_status(
+                    repo_root=lookup.state_repo_root,
+                    session_id=sid,
+                    status="needs_repair",
+                )
+                payload.update(
+                    {
+                        "status": updated["status"],
+                        "session_id": sid,
+                        "leases_released": False,
+                    }
+                )
+            except Exception as state_exc:
+                payload["state_error"] = str(state_exc)
+        print_json(payload)
         return 2
 
 

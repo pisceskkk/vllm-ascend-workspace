@@ -9,6 +9,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[4]
 SKILL = ROOT / ".agents" / "skills" / "session-management"
@@ -30,6 +32,60 @@ session_remove = load_module()
 
 
 class SessionRemoveTests(unittest.TestCase):
+    def test_remote_cleanup_exception_marks_session_needs_repair(self) -> None:
+        lookup = SimpleNamespace(
+            session={"session_id": "cleanup-session"},
+            session_file=Path("/tmp/session.json"),
+            state_repo_root=Path("/tmp/state"),
+        )
+        with (
+            mock.patch.object(
+                session_remove,
+                "load_session_lookup",
+                return_value=lookup,
+            ),
+            mock.patch.object(
+                session_remove,
+                "session_serving_state_path",
+                return_value=Path("/definitely/missing/serving.json"),
+            ),
+            mock.patch.object(
+                session_remove,
+                "session_record_for_execution",
+                return_value={},
+            ),
+            mock.patch.object(
+                session_remove,
+                "remove_container",
+                side_effect=RuntimeError("host unreachable"),
+            ),
+            mock.patch.object(
+                session_remove,
+                "mark_session_status",
+                return_value={"status": "needs_repair"},
+            ) as mark_status,
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "session_remove.py",
+                    "--session-id",
+                    "cleanup-session",
+                    "--remove-container",
+                    "--release-leases",
+                ],
+            ),
+            mock.patch("builtins.print"),
+        ):
+            returncode = session_remove.main()
+
+        self.assertEqual(returncode, 2)
+        mark_status.assert_called_once_with(
+            repo_root=lookup.state_repo_root,
+            session_id="cleanup-session",
+            status="needs_repair",
+        )
+
     def test_deinitializes_submodules_before_removing_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             worktree = Path(tmp)
