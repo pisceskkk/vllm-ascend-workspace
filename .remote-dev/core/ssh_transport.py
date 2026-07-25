@@ -19,6 +19,7 @@ REMOTE_PYTHON_RUNNER = (
     "exec(compile(envelope['code'],'<remote-dev>','exec'),{'__name__':'__main__'})"
 )
 SAFE_DIRECT_STDIN_BYTES = 768
+SAFE_DIRECT_COMMAND_BYTES = 768
 STAGED_CHUNK_BYTES = 720
 
 
@@ -75,7 +76,10 @@ def run_bytes(
     stdin: bytes | None = None,
     timeout_ms: int | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
-    if stdin is None or len(stdin) <= SAFE_DIRECT_STDIN_BYTES:
+    encoded_command = f"bash -c {shlex.quote(remote_command)}".encode("utf-8")
+    stage_stdin = stdin is not None and len(stdin) > SAFE_DIRECT_STDIN_BYTES
+    stage_command = len(encoded_command) > SAFE_DIRECT_COMMAND_BYTES
+    if not stage_stdin and not stage_command:
         return _run_bytes_once(
             endpoint,
             remote_command,
@@ -84,43 +88,90 @@ def run_bytes(
         )
 
     deadline = None if timeout_ms is None else time.monotonic() + timeout_ms / 1000
-    remote_input = f"/tmp/.remote-dev-input-{uuid.uuid4().hex}.bin"
-    init = _run_bytes_once(
-        endpoint,
-        f"umask 077; : > {shlex.quote(remote_input)}",
-        timeout_ms=_remaining_timeout_ms(deadline),
-    )
-    if init.returncode != 0:
-        return init
+    remote_input: str | None = None
+    remote_script: str | None = None
     try:
-        for offset in range(0, len(stdin), STAGED_CHUNK_BYTES):
-            encoded = base64.b64encode(
-                stdin[offset : offset + STAGED_CHUNK_BYTES]
-            ).decode("ascii")
-            append = _run_bytes_once(
+        if stage_stdin:
+            assert stdin is not None
+            remote_input, failure = _stage_remote_bytes(
                 endpoint,
-                (
-                    f"printf %s {shlex.quote(encoded)} | base64 -d >> "
-                    f"{shlex.quote(remote_input)}"
-                ),
+                stdin,
+                kind="input",
+                deadline=deadline,
+            )
+            if failure is not None:
+                return failure
+        if stage_command:
+            remote_script, failure = _stage_remote_bytes(
+                endpoint,
+                remote_command.encode("utf-8"),
+                kind="script",
+                deadline=deadline,
+            )
+            if failure is not None:
+                return failure
+            execution = f"bash {shlex.quote(remote_script)}"
+        else:
+            execution = remote_command
+        if remote_input is None:
+            return _run_bytes_once(
+                endpoint,
+                execution,
+                stdin=stdin,
                 timeout_ms=_remaining_timeout_ms(deadline),
             )
-            if append.returncode != 0:
-                return append
         return _run_bytes_once(
             endpoint,
             (
-                f"bash -c {shlex.quote(remote_command)} "
+                f"bash -c {shlex.quote(execution)} "
                 f"< {shlex.quote(remote_input)}"
             ),
             timeout_ms=_remaining_timeout_ms(deadline),
         )
     finally:
-        _run_bytes_once(
+        staged_paths = [
+            path
+            for path in (remote_input, remote_script)
+            if path is not None
+        ]
+        if staged_paths:
+            _run_bytes_once(
+                endpoint,
+                "rm -f " + " ".join(shlex.quote(path) for path in staged_paths),
+                timeout_ms=_remaining_timeout_ms(deadline, cleanup=True),
+            )
+
+
+def _stage_remote_bytes(
+    endpoint: Endpoint,
+    payload: bytes,
+    *,
+    kind: str,
+    deadline: float | None,
+) -> tuple[str, subprocess.CompletedProcess[bytes] | None]:
+    remote_path = f"/tmp/.remote-dev-{kind}-{uuid.uuid4().hex}.bin"
+    init = _run_bytes_once(
+        endpoint,
+        f"umask 077; : > {shlex.quote(remote_path)}",
+        timeout_ms=_remaining_timeout_ms(deadline),
+    )
+    if init.returncode != 0:
+        return remote_path, init
+    for offset in range(0, len(payload), STAGED_CHUNK_BYTES):
+        encoded = base64.b64encode(
+            payload[offset : offset + STAGED_CHUNK_BYTES]
+        ).decode("ascii")
+        append = _run_bytes_once(
             endpoint,
-            f"rm -f {shlex.quote(remote_input)}",
-            timeout_ms=_remaining_timeout_ms(deadline, cleanup=True),
+            (
+                f"printf %s {shlex.quote(encoded)} | base64 -d >> "
+                f"{shlex.quote(remote_path)}"
+            ),
+            timeout_ms=_remaining_timeout_ms(deadline),
         )
+        if append.returncode != 0:
+            return remote_path, append
+    return remote_path, None
 
 
 def _remaining_timeout_ms(
@@ -218,16 +269,28 @@ def run_remote_python(
             "stdout_tail": stdout[-4000:],
             "stderr_tail": stderr[-4000:],
         }
-    try:
-        data = json.loads(stdout.strip())
-    except json.JSONDecodeError as exc:
+    data = _last_json_object(stdout)
+    if data is None:
         return {
             "status": "failed",
-            "error": f"remote python returned non-JSON: {exc}",
+            "error": "remote python returned no JSON object",
             "stdout_tail": stdout[-4000:],
             "stderr_tail": stderr[-4000:],
         }
-    return data if isinstance(data, dict) else {"status": "failed", "error": "remote python JSON was not an object"}
+    return data
+
+
+def _last_json_object(stdout: str) -> dict[str, Any] | None:
+    for line in reversed(stdout.splitlines()):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
 
 
 def _decode_stream(value: str | bytes | None) -> str:

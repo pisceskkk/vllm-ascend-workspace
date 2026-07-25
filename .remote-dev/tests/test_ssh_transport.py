@@ -42,16 +42,17 @@ class SshTransportTests(unittest.TestCase):
         endpoint = Endpoint(host="1.2.3.4", port=46000)
         observed: dict[str, object] = {}
 
-        def fake_run(args, **kwargs):
-            observed["args"] = args
+        def fake_run_bytes(_endpoint, remote_command, **kwargs):
+            observed["remote_command"] = remote_command
+            observed["kwargs"] = kwargs
             return subprocess.CompletedProcess(
-                args=args,
+                args=[],
                 returncode=0,
-                stdout='{"status":"ok"}',
-                stderr="",
+                stdout=b'{"status":"ok"}',
+                stderr=b"",
             )
 
-        with mock.patch.object(ssh_transport.subprocess, "run", fake_run):
+        with mock.patch.object(ssh_transport, "run_bytes", fake_run_bytes):
             payload = ssh_transport.run_remote_python(
                 endpoint,
                 "print('{}')",
@@ -60,12 +61,36 @@ class SshTransportTests(unittest.TestCase):
                 runtime_env=True,
             )
 
-        command = observed["args"][-1]
+        command = observed["remote_command"]
         self.assertEqual(payload["status"], "ok")
         self.assertTrue(command.startswith("bash -c "))
         self.assertIn("/etc/profile.d/vaws-ascend-env.sh", command)
         self.assertIn("/usr/local/python*/bin/python3", command)
         self.assertIn("/vllm-workspace", command)
+
+    def test_run_remote_python_accepts_runtime_logs_before_json(self) -> None:
+        endpoint = Endpoint(host="1.2.3.4", port=46000)
+
+        def fake_run_bytes(_endpoint, _remote_command, **_kwargs):
+            return subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=(
+                    b"INFO plugin activated\n"
+                    b'{"status":"ok","summary":{"python":"3.12"}}\n'
+                ),
+                stderr=b"",
+            )
+
+        with mock.patch.object(ssh_transport, "run_bytes", fake_run_bytes):
+            payload = ssh_transport.run_remote_python(
+                endpoint,
+                "print('{}')",
+                {},
+            )
+
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["summary"]["python"], "3.12")
 
     def test_run_bytes_quotes_shell_command_as_one_remote_command(self) -> None:
         endpoint = Endpoint(host="1.2.3.4", port=46000)
@@ -124,6 +149,48 @@ class SshTransportTests(unittest.TestCase):
         self.assertIn("< /tmp/.remote-dev-input-abc123.bin", commands[4])
         self.assertIn("rm -f", commands[5])
         self.assertTrue(all(call["kwargs"].get("input") is None for call in calls))
+
+    def test_run_bytes_stages_long_remote_command(self) -> None:
+        endpoint = Endpoint(host="1.2.3.4", port=46000)
+        calls: list[dict[str, object]] = []
+
+        def fake_run(args, **kwargs):
+            calls.append({"args": args, "kwargs": kwargs})
+            return subprocess.CompletedProcess(
+                args=args,
+                returncode=0,
+                stdout=b"done",
+                stderr=b"",
+            )
+
+        with (
+            mock.patch.object(ssh_transport.subprocess, "run", fake_run),
+            mock.patch.object(
+                ssh_transport.uuid,
+                "uuid4",
+                return_value=mock.Mock(hex="script123"),
+            ),
+        ):
+            result = ssh_transport.run_bytes(
+                endpoint,
+                "printf x\n" * 300,
+                stdin=b"small",
+                timeout_ms=30000,
+            )
+
+        self.assertEqual(result.stdout, b"done")
+        commands = [call["args"][-1] for call in calls]
+        self.assertIn(".remote-dev-script-script123.bin", commands[0])
+        self.assertTrue(
+            any("bash /tmp/.remote-dev-script-script123.bin" in command for command in commands)
+        )
+        self.assertIn("rm -f", commands[-1])
+        final_call = next(
+            call
+            for call in calls
+            if "bash /tmp/.remote-dev-script-script123.bin" in call["args"][-1]
+        )
+        self.assertEqual(final_call["kwargs"]["input"], b"small")
 
 
 if __name__ == "__main__":
