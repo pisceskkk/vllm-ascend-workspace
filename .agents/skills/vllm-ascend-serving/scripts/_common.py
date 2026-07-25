@@ -57,6 +57,8 @@ class ExecutionTarget:
 def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
     return [
         "ssh",
+        "-T",
+        "-n",
         "-o", "BatchMode=yes",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "LogLevel=ERROR",
@@ -211,24 +213,36 @@ def _parse_npu_smi(output: str) -> dict[str, Any]:
     import re
 
     dev_ids: set[int] = set()
+    header_ids: set[int] = set()
     hbm: dict[int, dict[str, int]] = {}
     current_npu: int | None = None
     lines = output.splitlines()
 
     for line in lines:
-        hdr = re.match(r"\|\s*(\d+)\s+\d*\w+\d+\w*\s+\|", line)
-        if hdr:
-            current_npu = int(hdr.group(1))
-            dev_ids.add(current_npu)
-            continue
-        if current_npu is not None and "0000:" in line:
+        if "0000:" in line:
+            chip = re.match(r"\|\s*(\d+)\s+(\d+)\s+\|.*0000:", line)
+            if chip:
+                dev_id = int(chip.group(2))
+            elif current_npu is not None:
+                dev_id = current_npu
+            else:
+                continue
+            dev_ids.add(dev_id)
             pairs = re.findall(r"(\d+)\s*/\s*(\d+)", line)
             if len(pairs) >= 2:
-                hbm[current_npu] = {
+                hbm[dev_id] = {
                     "used_mb": int(pairs[-1][0]),
                     "total_mb": int(pairs[-1][1]),
                 }
-            current_npu = None
+            continue
+        hdr = re.match(r"\|\s*(\d+)\s+\d*\w+\d+\w*\s+\|", line)
+        if hdr:
+            current_npu = int(hdr.group(1))
+            header_ids.add(current_npu)
+            continue
+
+    if not dev_ids:
+        dev_ids.update(header_ids)
 
     proc_busy: dict[int, list[dict[str, Any]]] = {}
     in_proc = False

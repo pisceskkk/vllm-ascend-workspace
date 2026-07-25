@@ -72,6 +72,7 @@ DEFAULT_ENV_PREAMBLE = (
     '  if [ -d "$dir" ]; then',
     '    export LD_LIBRARY_PATH="$dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"',
     '  fi',
+    '  return 0',
     '}',
     'prepend_ld_path /usr/local/Ascend/driver/lib64',
     'prepend_ld_path /usr/local/Ascend/driver/lib64/driver',
@@ -82,6 +83,7 @@ DEFAULT_ENV_PREAMBLE = (
     '    source "$file" >/dev/null 2>&1 || true',
     '    set -u',
     '  fi',
+    '  return 0',
     '}',
     'for _ascend_env in '
     '/etc/profile.d/vaws-ascend-env.sh '
@@ -104,7 +106,7 @@ DEFAULT_ENV_PREAMBLE = (
     'if [ -n "$PYTHON_CANDIDATE" ]; then export PYTHON="$PYTHON_CANDIDATE"; elif command -v python3 >/dev/null 2>&1; then export PYTHON="$(command -v python3)"; elif command -v python >/dev/null 2>&1; then export PYTHON="$(command -v python)"; else echo "python not found" >&2; exit 127; fi',
     'PYTHON_BIN_DIR="$(dirname "$PYTHON")"',
     'VAWS_PYTHON_SHIM_DIR="$(mktemp -d /tmp/vaws-python-shim.XXXXXX)"',
-    'trap "rm -rf \"$VAWS_PYTHON_SHIM_DIR\"" EXIT',
+    "trap 'rm -rf \"$VAWS_PYTHON_SHIM_DIR\"' EXIT",
     'ln -sf "$PYTHON" "$VAWS_PYTHON_SHIM_DIR/python"',
     'ln -sf "$PYTHON" "$VAWS_PYTHON_SHIM_DIR/python3"',
     'export PATH="$VAWS_PYTHON_SHIM_DIR:$PYTHON_BIN_DIR:$PATH"',
@@ -1144,7 +1146,13 @@ def read_runtime_install_env(
             'PY',
         ]
     )
-    result = ssh_exec(container, '\n'.join(lines))
+    try:
+        result = ssh_exec(container, '\n'.join(lines), timeout=15)
+    except RuntimeError:
+        # The snapshot is diagnostic only. Some site-specific Ascend shell
+        # hooks keep an inherited pipe open or fail in non-interactive shells;
+        # parity and installation must continue without this optional metadata.
+        return {}
     raw = json.loads(result.stdout.strip() or '{}')
     return redact_runtime_env({str(key): str(value) for key, value in raw.items()})
 

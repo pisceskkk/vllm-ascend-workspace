@@ -238,9 +238,10 @@ def quoted(script: str) -> str:
     return shlex.quote(script)
 
 
-def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
-    return [
+def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
+    cmd = [
         'ssh',
+        '-T',
         '-o',
         'BatchMode=yes',
         '-o',
@@ -251,6 +252,9 @@ def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
         str(endpoint.port),
         endpoint.destination(),
     ]
+    if not stdin:
+        cmd.insert(1, '-n')
+    return cmd
 
 
 def parse_progress_event(line: str) -> dict[str, Any] | None:
@@ -271,9 +275,15 @@ def ssh_exec(
     *,
     check: bool = True,
     capture_output: bool = True,
+    timeout: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    cmd = [*_ssh_base_cmd(endpoint), 'bash', '-c', shlex.quote(script)]
-    return run(cmd, check=check, capture_output=capture_output)
+    cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
+    return run(
+        cmd,
+        check=check,
+        capture_output=capture_output,
+        timeout=timeout,
+    )
 
 
 def ssh_exec_stream(
@@ -283,7 +293,7 @@ def ssh_exec_stream(
     check: bool = True,
     stream_progress: bool = True,
 ) -> SshStreamingResult:
-    cmd = [*_ssh_base_cmd(endpoint), 'bash', '-c', shlex.quote(script)]
+    cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,

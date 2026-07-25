@@ -144,6 +144,9 @@
 **When** `serve_probe_npus.py --machine <alias>` runs,
 **Then** returns JSON with `devices`, `busy` (with PID details), `hbm` (per-device HBM usage), `free`, `free_count`, and `hbm_busy_threshold_mb`. Probing is done on the bare-metal host for cross-container visibility.
 
+Both header-plus-PCI and chip/device-column `npu-smi` layouts map HBM usage to
+the correct device ID.
+
 ## A19. Escaping safety
 
 **Given** model paths, env values, or args containing spaces, quotes, or shell metacharacters,

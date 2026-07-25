@@ -26,6 +26,7 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 - the skill treats the local working tree as the source of truth, including committed, staged, unstaged, and untracked **non-ignored** files
 - the skill does not require the user to commit or push before parity
 - the skill does not use `scp`, `sftp`, `rsync`, `sshpass`, or `expect`
+- command-only SSH probes disable pseudo-TTY allocation and stdin
 - the skill does not require GitHub credentials on the host or in the container
 - the skill keeps local runtime state only under `.vaws-local/remote-code-parity/`
 - session mode resolves the source worktree and container endpoint from `.vaws-local/sessions/<session-id>/session.json`
@@ -41,6 +42,7 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 - runtime install sets bounded CMake/build parallelism through `VAWS_BUILD_JOBS`, `MAX_JOBS`, and `CMAKE_BUILD_PARALLEL_LEVEL`
 - runtime install does not run `pip install uv`, call `uv`, probe mirror candidates, or retry across indexes
 - runtime install records its effective cache/compile/index env in the manifest, final summary, and runtime state with URL userinfo redacted
+- optional runtime environment metadata has a bounded timeout and cannot block parity
 
 ### Repo graph and snapshotting
 

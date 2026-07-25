@@ -51,6 +51,12 @@ jobs:
       - name: Run benchmark tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-benchmark/tests
 
+      - name: Run remote-code-parity tests
+        run: python -B -m unittest discover -s .agents/skills/remote-code-parity/tests
+
+      - name: Run serving tests
+        run: python -B -m unittest discover -s .agents/skills/vllm-ascend-serving/tests
+
       - name: Run distributed-debug tests
         run: python -B -m unittest discover -s .agents/skills/vllm-ascend-distributed-debug/tests
 

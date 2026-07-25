@@ -377,9 +377,10 @@ def resolve_remote_target(
     )
 
 
-def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
-    return [
+def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
+    cmd = [
         "ssh",
+        "-T",
         "-o",
         "BatchMode=yes",
         "-o",
@@ -390,6 +391,9 @@ def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
         str(endpoint.port),
         endpoint.destination(),
     ]
+    if not stdin:
+        cmd.insert(2, "-n")
+    return cmd
 
 
 def ssh_exec_raw(
@@ -399,7 +403,7 @@ def ssh_exec_raw(
     timeout: float | None = None,
     check: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    cmd = [*_ssh_base_cmd(endpoint), "bash", "-c", shlex.quote(script)]
+    cmd = [*_ssh_base_cmd(endpoint, stdin=False), "bash", "-c", shlex.quote(script)]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
     if check and result.returncode != 0:
         raise RemoteToolboxError(
