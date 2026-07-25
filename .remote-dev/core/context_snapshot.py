@@ -89,7 +89,15 @@ def _duration_ms(start: float) -> int:
 def remote_probe(endpoint: Endpoint, *, timeout_ms: int = 120000) -> dict[str, Any]:
     started = utc_now_iso()
     start = time.monotonic()
-    data = run_remote_python(endpoint, REMOTE_PROBE_PY, {"root": endpoint.root}, timeout_ms=timeout_ms)
+    workspace_root = endpoint.effective_cwd
+    data = run_remote_python(
+        endpoint,
+        REMOTE_PROBE_PY,
+        {"root": workspace_root},
+        timeout_ms=timeout_ms,
+        cwd=workspace_root,
+        runtime_env=endpoint.runtime_env,
+    )
     status = str(data.get("status", "failed"))
     summary = data.get("summary", {}) if isinstance(data.get("summary"), dict) else {}
     snapshot = write_context_snapshot(endpoint, summary, data) if status == "ok" else None

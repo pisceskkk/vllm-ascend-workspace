@@ -49,7 +49,19 @@ def run_command(name: str, argv: list[str]) -> dict[str, Any]:
 
 def local_checks() -> list[dict[str, Any]]:
     commands = [
-        ("compileall", ["python3", "-m", "compileall", "-q", ".remote-dev", ".agents"]),
+        (
+            "compileall",
+            [
+                "python3",
+                "-X",
+                "pycache_prefix=.remote-dev/state/pycache-validation",
+                "-m",
+                "compileall",
+                "-q",
+                ".remote-dev",
+                ".agents",
+            ],
+        ),
         ("remote_dev_unittest", ["python3", "-m", "unittest", "discover", "-s", ".remote-dev/tests"]),
         ("agents_unittest", ["python3", "-m", "unittest", "discover", "-s", ".agents/tests"]),
         ("claude_skill_shims", ["python3", ".remote-dev/tools/sync_claude_skills.py", "--check"]),
@@ -194,22 +206,30 @@ def run_parallel_worker(endpoint: dict[str, Any], scratch: str, index: int, time
     return {"worker": index, "status": "ok", "checks": checks}
 
 
+def validation_paths(
+    endpoint: dict[str, Any],
+    stamp: str,
+) -> tuple[str, str, dict[str, Any]]:
+    scratch_root = (endpoint.get("cwd") or "/vllm-workspace").rstrip("/") or "/"
+    scratch = f"{scratch_root.rstrip('/')}/.remote-dev/validation/{stamp}"
+    narrow_endpoint = {**endpoint, "root": scratch, "cwd": scratch}
+    return scratch_root, scratch, narrow_endpoint
+
+
 def live_endpoint_checks(args: argparse.Namespace) -> dict[str, Any]:
     endpoint = endpoint_payload(args)
     if not any(endpoint.get(key) for key in ("host", "alias", "session_id", "session_file", "machine")):
         return {"status": "skipped", "reason": "no endpoint selector was provided"}
     timeout_ms = args.timeout_ms
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    scratch_root = (endpoint.get("cwd") or "/vllm-workspace").rstrip("/")
-    scratch = f"{scratch_root}/.remote-dev/validation/{stamp}"
-    narrow_endpoint = {**endpoint, "root": scratch_root, "cwd": scratch_root}
+    scratch_root, scratch, narrow_endpoint = validation_paths(endpoint, stamp)
     checks: list[dict[str, Any]] = []
     failures: list[str] = []
     try:
         progress("remote:probe")
         checks.append(require_outcome("probe", call_tool("remote.probe", {**endpoint, "timeout_ms": timeout_ms})))
         checks.append(require_outcome("context_snapshot", call_tool("remote.context_snapshot", {**endpoint, "timeout_ms": timeout_ms, "live_probe": True})))
-        checks.append(require_outcome("cwd_blocked", call_tool("remote.bash", {**narrow_endpoint, "cwd": "/tmp", "command": "pwd", "timeout_ms": timeout_ms}), outcomes={"blocked"}, statuses={"cwd_outside_root"}))
+        checks.append(require_outcome("cwd_blocked", call_tool("remote.bash", {**narrow_endpoint, "cwd": scratch_root, "command": "pwd", "timeout_ms": timeout_ms}), outcomes={"blocked"}, statuses={"cwd_outside_root"}))
         checks.append(require_outcome("cwd_not_found", call_tool("remote.bash", {**endpoint, "cwd": f"{scratch}/missing", "command": "pwd", "timeout_ms": timeout_ms}), outcomes={"failed"}, statuses={"cwd_not_found"}))
         checks.append(require_outcome("nonzero_exit", call_tool("remote.bash", {**endpoint, "command": "exit 7", "timeout_ms": timeout_ms}), outcomes={"failed"}, statuses={"nonzero_exit"}))
         checks.append(require_outcome("timeout", call_tool("remote.bash", {**endpoint, "command": "sleep 2", "timeout_ms": 500}), outcomes={"timeout"}, statuses={"timeout"}))
