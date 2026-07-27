@@ -72,6 +72,12 @@ Use these task-oriented wrappers for normal agent work. They keep the parameter 
 - `python3 .agents/skills/machine-management/scripts/machine_verify.py --machine <alias-or-ip>`
 - `python3 .agents/skills/machine-management/scripts/machine_repair.py --machine <alias-or-ip> [--image <rc|main|stable|custom-ref>] [--machine-type <A2|A3|310P>] [--password-env NAME | --password-stdin | --password ...]`
 - `python3 .agents/skills/machine-management/scripts/machine_remove.py --machine <alias-or-ip>`
+- `python3 .agents/skills/machine-management/scripts/npu_occupancy.py --machine <alias-or-ip> [--format json|table] [--samples N] [--interval SECONDS]`
+
+`npu_occupancy.py` is a read-only host-side probe. It uses bare-metal
+`npu-smi` plus `/proc` and Docker metadata to report NPU HBM/memory, AICore
+utilization, NPU process PIDs/names, process cwd, and best-effort container
+ownership across all containers on that host.
 
 Design intent:
 

@@ -41,6 +41,8 @@ These should not trigger `machine-management` unless machine readiness is the ob
   - `machine_verify.py`
   - `machine_repair.py`
   - `machine_remove.py`
+- read-only NPU occupancy inspection can be completed through:
+  - `npu_occupancy.py`
 - normal wrappers do not require the agent to manually call `inventory.py put`, `manage_machine.py remove-container`, or `manage_machine.py verify-machine`
 - the wrapper surface is narrower than the low-level helper surface
 - alias tolerance stays in parser code, not in the main skill narrative

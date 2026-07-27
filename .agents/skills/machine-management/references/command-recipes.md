@@ -13,6 +13,7 @@ python3 .agents/skills/machine-management/scripts/machine_add.py --host 173.125.
 python3 .agents/skills/machine-management/scripts/machine_verify.py --machine 173.125.1.2
 python3 .agents/skills/machine-management/scripts/machine_repair.py --machine 173.125.1.2
 python3 .agents/skills/machine-management/scripts/machine_remove.py --machine 173.125.1.2
+python3 .agents/skills/machine-management/scripts/npu_occupancy.py --machine 173.125.1.2 --format table
 ```
 
 Windows:
@@ -22,6 +23,7 @@ py -3 .agents/skills/machine-management/scripts/machine_add.py --host 173.125.1.
 py -3 .agents/skills/machine-management/scripts/machine_verify.py --machine 173.125.1.2
 py -3 .agents/skills/machine-management/scripts/machine_repair.py --machine 173.125.1.2
 py -3 .agents/skills/machine-management/scripts/machine_remove.py --machine 173.125.1.2
+py -3 .agents/skills/machine-management/scripts/npu_occupancy.py --machine 173.125.1.2 --format table
 ```
 
 ## Add one new machine
@@ -115,6 +117,34 @@ python3 .agents/skills/machine-management/scripts/machine_add.py \
 ```bash
 python3 .agents/skills/machine-management/scripts/machine_verify.py \
   --machine 173.125.1.2
+```
+
+## Inspect NPU occupancy
+
+Run from the bare-metal host view so processes from all containers are visible:
+
+```bash
+python3 .agents/skills/machine-management/scripts/npu_occupancy.py \
+  --machine 173.125.1.2 \
+  --format table
+```
+
+For automation, keep the default JSON output:
+
+```bash
+python3 .agents/skills/machine-management/scripts/npu_occupancy.py \
+  --machine dcp14 \
+  --samples 3 \
+  --interval 1
+```
+
+For an unmanaged direct host endpoint:
+
+```bash
+python3 .agents/skills/machine-management/scripts/npu_occupancy.py \
+  --host 173.125.1.2 \
+  --host-user root \
+  --host-port 22
 ```
 
 ## Repair one managed machine
