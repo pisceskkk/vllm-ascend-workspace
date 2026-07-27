@@ -73,6 +73,12 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def knowledge_session_key(session_id: str) -> str:
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise KnowledgeError("session id must be a non-empty string")
+    return hashlib.sha256(session_id.strip().encode("utf-8")).hexdigest()[:20]
+
+
 def _require_non_empty_string(value: Any, path: str, errors: list[str]) -> str:
     if not isinstance(value, str) or not value.strip():
         errors.append(f"{path} must be a non-empty string")
@@ -496,6 +502,7 @@ def capture_candidate(
     if path.exists():
         existing = load_candidate(path)
         merged = deepcopy(existing)
+        semantic_changed = False
         for field in (
             "summary",
             "scope",
@@ -506,25 +513,44 @@ def capture_candidate(
             "applicable_versions",
             "verification",
         ):
+            if existing[field] != candidate[field]:
+                semantic_changed = True
             merged[field] = deepcopy(candidate[field])
-        merged["fingerprints"] = _merge_unique(
+        merged_fingerprints = _merge_unique(
             existing["fingerprints"], candidate["fingerprints"]
         )
-        merged["evidence"] = _merge_unique(existing["evidence"], candidate["evidence"])
+        merged_evidence = _merge_unique(existing["evidence"], candidate["evidence"])
+        if merged_fingerprints != existing["fingerprints"]:
+            semantic_changed = True
+        if merged_evidence != existing["evidence"]:
+            semantic_changed = True
+        merged["fingerprints"] = merged_fingerprints
+        merged["evidence"] = merged_evidence
+        new_occurrence = len(merged_evidence) > len(existing["evidence"])
         for field in ("run_ids", "commits"):
-            merged["source"][field] = _merge_unique(
+            merged_values = _merge_unique(
                 existing["source"].get(field, []), candidate["source"].get(field, [])
             )
+            if len(merged_values) > len(existing["source"].get(field, [])):
+                new_occurrence = True
+                semantic_changed = True
+            merged["source"][field] = merged_values
         if candidate["source"].get("session_id"):
+            if candidate["source"]["session_id"] != existing["source"].get("session_id"):
+                new_occurrence = True
+                semantic_changed = True
             merged["source"]["session_id"] = candidate["source"]["session_id"]
         confidence_order = {"low": 0, "medium": 1, "high": 2}
         if confidence_order[candidate["confidence"]] > confidence_order[existing["confidence"]]:
             merged["confidence"] = candidate["confidence"]
-        merged["occurrence_count"] = existing["occurrence_count"] + 1
-        merged["last_seen_at"] = timestamp
-        merged["updated_at"] = timestamp
+            semantic_changed = True
+        if new_occurrence:
+            merged["occurrence_count"] = existing["occurrence_count"] + 1
+            merged["last_seen_at"] = timestamp
+        if semantic_changed:
+            merged["updated_at"] = timestamp
         candidate = merged
-        action = "updated"
+        action = "updated" if semantic_changed else "unchanged"
     validate_candidate(candidate)
     _write_json_atomic(path, candidate)
     return {

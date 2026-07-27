@@ -48,6 +48,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/scripts/knowledge_validate.py` validates the versioned shared knowledge documents.
 - `.agents/scripts/knowledge_query.py` retrieves compact matching knowledge summaries and expands one entry only by id.
 - `.agents/scripts/knowledge_capture.py` records or merges one verified, redacted candidate without loading a Skill.
+- `.agents/hooks/knowledge_session_end.py` flushes only candidates explicitly deferred for the ending Codex session; it never reads the transcript or emits model context.
 - `.agents/knowledge/` stores versioned compatibility, capability, validation, and failure-signature facts; unknown combinations are never assumed supported.
 - `.agents/schemas/` stores the machine-readable Run Manifest and knowledge contracts.
 - `.agents/lib/vaws_local_state.py` is the shared library for untracked local runtime state.
@@ -169,6 +170,8 @@ Untracked workspace-local state lives under `.vaws-local/`:
 - `.vaws-local/ascend-profiling-collection/runs/`
 - `.vaws-local/profiling-analysis/runs/`
 - `.vaws-local/knowledge/candidates/`
+- `.vaws-local/knowledge/pending/<session-key>/`
+- `.vaws-local/knowledge/session-end/`
 
 Parallel remote work should use `session-management` first. A session owns a local worktree, a dedicated remote container, session-scoped serving/benchmark/profiling state, and resource leases. Existing `--machine` commands remain legacy-compatible for single-tenant workflows.
 

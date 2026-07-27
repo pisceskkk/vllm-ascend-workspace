@@ -1,6 +1,54 @@
 {
-  "schema_version": 1,
+  "entries": [
+    {
+      "applicable_versions": "workspace revisions before and including 76c44b0",
+      "id": "remote-ssh-framed-transfer-ack",
+      "rule": {
+        "avoidance": "Keep each transport frame below the measured limit.",
+        "candidate_id": "remote-code-parity-remote-ssh-frames-require-acknowledgements-426e6e6a84",
+        "candidate_ids": [
+          "remote-code-parity-remote-ssh-frames-require-acknowledgements-426e6e6a84"
+        ],
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "commit",
+            "stable": true,
+            "uri": "git:76c44b0"
+          }
+        ],
+        "fingerprints": [
+          "timed out waiting for framed transfer acknowledgement"
+        ],
+        "first_seen_at": "2026-07-27T02:22:59Z",
+        "last_verified_at": "2026-07-27T02:22:59Z",
+        "occurrence_count": 1,
+        "owner_skill": "remote-code-parity",
+        "resolution": "Send base64 frames and wait for an acknowledgement per frame.",
+        "root_cause": "The constrained SSH path drops oversized unacknowledged frames.",
+        "scope": {
+          "component": [
+            "ssh-transport"
+          ],
+          "machine": [
+            "hvv-sz"
+          ]
+        },
+        "summary": "Remote SSH frames require acknowledgements",
+        "symptom": "Artifact uploads stall on hvv-sz.",
+        "verification": {
+          "checks": [
+            "Uploaded a 4,934,277-byte artifact and matched SHA256 on hvv-sz."
+          ],
+          "status": "passed"
+        }
+      },
+      "source": "promoted from candidate remote-code-parity-remote-ssh-frames-require-acknowledgements-426e6e6a84; stable evidence: git:76c44b0",
+      "status": "experimental",
+      "updated_at": "2026-07-27"
+    }
+  ],
   "kind": "known-failure-signatures",
-  "updated_at": "2026-07-25",
-  "entries": []
+  "schema_version": 1,
+  "updated_at": "2026-07-27"
 }

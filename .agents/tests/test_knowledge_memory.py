@@ -149,6 +149,28 @@ class CandidateTests(unittest.TestCase):
             self.assertEqual(stored["occurrence_count"], 2)
             self.assertEqual(len(stored["evidence"]), 2)
 
+    def test_identical_capture_is_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            knowledge = root / "knowledge"
+            candidates = root / "candidates"
+            write_knowledge_dir(knowledge)
+            capture_candidate(
+                candidate_payload(),
+                candidate_dir=candidates,
+                knowledge_dir=knowledge,
+                now=NOW,
+            )
+            second = capture_candidate(
+                candidate_payload(),
+                candidate_dir=candidates,
+                knowledge_dir=knowledge,
+                now="2026-07-27T13:00:00Z",
+            )
+            stored = json.loads(Path(second["path"]).read_text(encoding="utf-8"))
+            self.assertEqual(second["action"], "unchanged")
+            self.assertEqual(stored["occurrence_count"], 1)
+
     def test_promoted_candidate_is_not_written_again(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -282,6 +304,38 @@ class CliTests(unittest.TestCase):
             self.assertEqual(queried.returncode, 0, queried.stderr)
             self.assertEqual(json.loads(queried.stdout)["matches"], [])
             self.assertEqual(queried.stderr, "")
+
+    def test_deferred_capture_uses_session_scoped_pending_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            knowledge = root / "knowledge"
+            write_knowledge_dir(knowledge)
+            input_path = root / "candidate.json"
+            input_path.write_text(
+                json.dumps(candidate_payload()), encoding="utf-8"
+            )
+            captured = subprocess.run(
+                [
+                    sys.executable,
+                    str(CAPTURE_SCRIPT),
+                    "--input",
+                    str(input_path),
+                    "--defer",
+                    "--session-id",
+                    "thread-deferred",
+                    "--pending-dir",
+                    str(root / "pending"),
+                    "--knowledge-dir",
+                    str(knowledge),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            result = json.loads(captured.stdout)
+            self.assertEqual(captured.returncode, 0, captured.stderr)
+            self.assertTrue(result["deferred"])
+            self.assertIn(result["session_key"], result["path"])
 
 
 if __name__ == "__main__":
