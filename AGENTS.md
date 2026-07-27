@@ -66,6 +66,7 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 | `ascend-operator-debug` | Reduce a model symptom to one Ascend operator call and validate an explicit input/mode matrix |
 | `vllm-ascend-pd-serving` | Orchestrate multi-session prefill/decode services, connector config, proxy health, rollback, and smoke |
 | `vllm-ascend-upstream-sync` | Compare vLLM refs, map compatibility risk to vllm-ascend consumers, and guard submodule checkout |
+| `curate-workspace-knowledge` | Explicitly review, deduplicate, promote, merge, reject, or deprecate verified knowledge candidates |
 
 None of these are gates for normal local coding, docs work, or unrelated Git tasks.
 For remote endpoint work, prefer `.remote-dev` tools first and use these skills
@@ -81,6 +82,7 @@ for domain workflows.
 - Skill wrappers: progress on `stderr`, final JSON on `stdout`.
 - Execution skills must use Run Manifest v1 from `.agents/lib/vaws_run_manifest.py` for new cross-workflow runs and keep manifests under untracked `.vaws-local/`.
 - Read fast-changing compatibility, capability, validation, and failure-signature facts from `.agents/knowledge/`; treat missing facts as unknown rather than supported.
+- On a concrete practical failure, query compact formal matches with `.agents/scripts/knowledge_query.py` before repeating diagnosis. After a novel fix has a confirmed cause and verification evidence, capture a candidate with `.agents/scripts/knowledge_capture.py`. These shared scripts do not load `curate-workspace-knowledge`; invoke that Skill only for explicit knowledge review or promotion.
 - Use the remote-dev substrate for agent-facing remote read/edit/bash/search/patch/job/artifact work. Use the remote toolbox entrypoints as the managed VAWS compatibility backend before falling back to bare SSH.
 - For parallel managed remote work, create or reuse a `session-management` session and pass `--session-id` through parity, serving, benchmark, and profiling commands. Legacy `--machine` flows remain available for explicitly single-tenant work.
 - This repo targets Huawei Ascend NPU. Local machines (Mac/PC) cannot run `torch`/`torch_npu`-dependent code. Do not attempt local test execution — go straight to the remote container.

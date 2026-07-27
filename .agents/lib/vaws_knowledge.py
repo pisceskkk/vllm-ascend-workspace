@@ -467,6 +467,10 @@ def _formal_candidate_ids(knowledge_dir: Path) -> set[str]:
             rule = entry.get("rule", {})
             if isinstance(rule, Mapping) and isinstance(rule.get("candidate_id"), str):
                 candidate_ids.add(rule["candidate_id"])
+            if isinstance(rule, Mapping) and isinstance(rule.get("candidate_ids"), list):
+                candidate_ids.update(
+                    value for value in rule["candidate_ids"] if isinstance(value, str)
+                )
     return candidate_ids
 
 
@@ -630,3 +634,17 @@ def get_knowledge_entry(
             if entry["id"] == entry_id:
                 return {"kind": kind, "source_file": filename, "entry": entry}
     return None
+
+
+def write_knowledge_document(path: Path, payload: Mapping[str, Any]) -> None:
+    expected_kind = KNOWLEDGE_FILES.get(path.name)
+    if expected_kind is None:
+        raise KnowledgeError(f"unsupported formal knowledge file: {path.name}")
+    validate_knowledge_document(
+        payload, expected_kind=expected_kind, path=str(path)
+    )
+    errors: list[str] = []
+    _scan_sensitive(payload, str(path), errors)
+    if errors:
+        raise KnowledgeError("; ".join(errors))
+    _write_json_atomic(path, payload)
