@@ -64,6 +64,10 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 | `vllm-ascend-performance-regression` | Control alternating baseline/candidate benchmarks and assess metric regressions with variance evidence |
 | `vllm-ascend-distributed-debug` | Diagnose rank topology, process-group, endpoint, collective, and distributed hang failures |
 | `ascend-operator-debug` | Reduce a model symptom to one Ascend operator call and validate an explicit input/mode matrix |
+| `ascend-triton-workflow` | Orchestrate end-to-end Ascend Triton development, correctness validation, optimization, and evidence linking |
+| `ascend-triton-operator-development` | Convert a PyTorch or GPU Triton operator contract into a first correct Ascend Triton candidate |
+| `ascend-triton-kernel-validation` | Gate PyTorch fallback and validate an Ascend Triton kernel over an explicit correctness matrix |
+| `ascend-triton-kernel-optimization` | Run profiler-driven, correctness-gated Ascend Triton performance experiments with keep/discard decisions |
 | `vllm-ascend-pd-serving` | Orchestrate multi-session prefill/decode services, connector config, proxy health, rollback, and smoke |
 | `vllm-ascend-upstream-sync` | Compare vLLM refs, map compatibility risk to vllm-ascend consumers, and guard submodule checkout |
 | `curate-workspace-knowledge` | Explicitly review, deduplicate, promote, merge, reject, or deprecate verified knowledge candidates |
