@@ -96,6 +96,8 @@ class SessionParityStateTests(unittest.TestCase):
 
         index = command.index("--state-root")
         self.assertEqual(command[index + 1], "/repos/workspace")
+        transport_index = command.index("--transport")
+        self.assertEqual(command[transport_index + 1], "auto")
 
 
 if __name__ == "__main__":

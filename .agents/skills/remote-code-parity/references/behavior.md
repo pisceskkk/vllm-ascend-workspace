@@ -113,16 +113,24 @@ Per-workspace layout:
 Required behavior:
 
 - create bare mirror repos inside the container cache root
-- stream Git bundles directly from local -> container SSH, then fetch them into the container-local bare mirrors
+- prefer direct SSH Git push into the container-local bare mirrors so repeated
+  snapshots transfer only objects missing from the current mirror ref
+- preserve deterministic parentless snapshot ids, but publish a separate
+  endpoint-scoped carrier chain over the same trees to provide receive-pack
+  with a common ancestor for object negotiation
+- support `auto`, `git`, and `bundle` transport selection; `auto` falls back to
+  the existing self-contained bundle import if receive-pack is unavailable
 - publish deterministic parentless tree snapshot commits so first use of an empty container mirror does not require shipping the full upstream history of large repos such as `vllm`
-- avoid remote receive-pack negotiation for those parentless transport commits so the remote mirror does not need to fix up deltas against absent base history
+- keep the parentless snapshots so first hydration sends only the current tree,
+  not upstream history; direct push may negotiate against an existing mirror,
+  while the bundle fallback remains independent of remote base history
 - also publish an advertised branch ref inside each mirror so ordinary fetch paths can see the latest synthetic snapshot
 - use a container-local lock while mutating cache or runtime state; locks carry owner metadata and stale lock directories are recovered after the bounded stale interval
 - stage oversized control scripts with bounded base64 command chunks, then
   execute and remove the temporary file instead of relying on remote
   command-line size or EOF-sensitive `bash -s`
-- transfer manifests and Git bundles through acknowledged sub-MTU frames and
-  require the remote SHA256 to match before mirror import
+- transfer manifests and fallback Git bundles through acknowledged sub-MTU
+  frames and require the remote SHA256 to match before mirror import
 - after failed or timed-out mirror hydration, best-effort terminate any matching legacy `git-receive-pack` process trees for that mirror and discard that repo's partial mirror before surfacing the failure
 - do not create or reuse a shared flat host path such as `/home/vaws`
 
