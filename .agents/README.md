@@ -44,6 +44,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/vllm-ascend-upstream-sync/` is the source-of-truth package for vLLM ref comparison, vllm-ascend compatibility signals, and guarded submodule checkout.
 - `.agents/skills/curate-workspace-knowledge/` is the explicit-only package for reviewing and promoting verified candidates into the existing formal knowledge files.
 - `.agents/scripts/workspace_profile.py` is the shared low-level helper for the local workspace machine profile.
+- `.agents/scripts/workspace_identity.py` manages the persistent local UUID4 and optional unified project/agent/resource alias.
 - `.agents/scripts/run_manifest.py` creates and validates shared Run Manifest v1 files.
 - `.agents/scripts/knowledge_validate.py` validates the versioned shared knowledge documents.
 - `.agents/scripts/knowledge_query.py` retrieves compact matching knowledge summaries and expands one entry only by id.
@@ -154,6 +155,7 @@ Reference files under `references/` are fallback detail, not the default executi
 
 Untracked workspace-local state lives under `.vaws-local/`:
 
+- `.vaws-local/workspace-identity.json`
 - `.vaws-local/machine-profile.json`
 - `.vaws-local/machine-inventory.json`
 - `.vaws-local/remote-code-parity/install-consents.json`
@@ -175,6 +177,12 @@ Untracked workspace-local state lives under `.vaws-local/`:
 
 Parallel remote work should use `session-management` first. A session owns a local worktree, a dedicated remote container, session-scoped serving/benchmark/profiling state, and resource leases. Existing `--machine` commands remain legacy-compatible for single-tenant workflows.
 
+Independent agents with separate workspace-local lease files may optionally use
+`session-management/scripts/npu_coordination.py`. It keeps an ephemeral,
+host-shared SQLite queue under `/tmp/vaws-npu-coordinator/v1/`, defers to actual
+host NPU occupancy and manual holds, and never becomes a mandatory execution
+gate.
+
 The remote-dev substrate is the preferred agent-facing surface once an endpoint
 exists. It resolves host/port direct endpoints by default, mirrors native
 read/edit/bash/search/patch semantics, records local refs under
@@ -192,6 +200,7 @@ The legacy repo-root `.machine-inventory.json` is compatibility input only and s
 
 Key guardrail:
 
+- broad init silently creates the persistent workspace UUID4, but must ask once before setting or declining a unified alias
 - on a missing machine profile, `workspace_profile.py ensure` now requires either `--username` or `--generate`
 - broad init should normally go through `repo-init/scripts/repo_init_profile.py`, which narrows the machine-username choice to: detected Git username, random `agent#####`, or custom
 - this prevents silent default usernames during broad init or first machine attach

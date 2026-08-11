@@ -1,5 +1,10 @@
 # Acceptance
 
+- New session records include `agent_identity.agent_id` and `agent_identity.alias` when available.
+- Unified aliases participate in new session container naming through the persisted machine namespace.
+- Missing identities and declined aliases preserve legacy behavior.
+- Coordinator submit defaults to the persistent UUID and publishes the configured alias without requiring `--agent-id`.
+
 - Two sessions on the same base machine have different worktree roots, container names, container SSH ports, and serving state paths.
 - For non-moving image policies, session creation checks the host-local image cache before `docker pull`.
 - The first session for a base image can create a `vaws-session-prepared:<image-hash>-ssh-v2` image after installing SSH packages and pip / pytest basics.
@@ -30,3 +35,14 @@
 - Group creation fails when live workspace or recursive submodule snapshots differ.
 - Startup order contains every member exactly once; shutdown order is its reverse.
 - Group teardown delegates to `session_remove.py` for every member and retains `needs_repair` when any member fails.
+- Shared NPU coordination state defaults to the bare-metal host's `/tmp/vaws-npu-coordinator/v1/` and recreates a new coordination epoch after state loss.
+- Shared NPU coordination is optional and does not gate existing Session, serving, benchmark, profiling, or remote-command entry points.
+- Multiple agents use SQLite transactions to grant a multi-device request atomically.
+- The strict FIFO queue head is the only task eligible for a new grant.
+- Actual `npu-smi` process/HBM occupancy, active manual holds, and existing cooperative grants are excluded from allocation.
+- A second `preflight` probe returns a newly conflicted grant to the queue while its start window remains valid.
+- Queue, grant, start, and heartbeat deadlines are reconciled without killing any process.
+- A heartbeat-expired or release-requested task remains `orphaned_busy` while its devices are observed busy or occupancy is unknown.
+- Releasing a task requires repeated free observations; one transient busy sample keeps the lease protected.
+- An estimated duration overrun marks an active task overdue but does not release or preempt it.
+- Human/manual holds can reserve exact devices for a bounded future window and report conflicts without stopping existing work.
