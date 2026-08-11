@@ -140,6 +140,19 @@ Use this when the host or image prerequisites fail, for example:
 
 ## Host auth contract
 
+Before key or password authentication is attempted, the public add, verify,
+repair, and remove wrappers run the shared local OpenSSH client preflight. The
+preflight uses `ssh -G` with the actual host, port, and user, so it parses the
+effective configuration without opening a network connection.
+
+If OpenSSH reports `bad owner or permissions on ...`, the wrapper returns
+`status: blocked`, `action: ssh-client-preflight`, and knowledge id
+`machine-management-openssh-system-config-ownership`. It may inspect the
+reported path, its symlink target, and relevant `/etc/ssh` ancestors with
+`lstat` / `stat -L`, but it must remain read-only. Do not bypass the invalid
+system configuration with `ssh -F`; ownership or mode repair is a separately
+approved privileged operation.
+
 The only allowed password use is one initial host bootstrap for a new machine.
 
 After host key auth is established:

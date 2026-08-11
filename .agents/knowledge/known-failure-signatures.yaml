@@ -20,6 +20,16 @@
             "kind": "runtime-check",
             "stable": false,
             "uri": "run:ssh-permission-repair-20260728"
+          },
+          {
+            "kind": "regression-test",
+            "stable": true,
+            "uri": ".agents/tests/test_ssh_preflight.py"
+          },
+          {
+            "kind": "regression-test",
+            "stable": true,
+            "uri": ".agents/skills/remote-code-parity/tests/test_parity_sync_preflight.py"
           }
         ],
         "fingerprints": [
@@ -27,10 +37,10 @@
           "all managed ssh targets fail before user ssh configuration is applied"
         ],
         "first_seen_at": "2026-07-28T04:04:59Z",
-        "last_verified_at": "2026-07-28T04:04:59Z",
+        "last_verified_at": "2026-08-11T12:16:11Z",
         "occurrence_count": 1,
         "owner_skill": "machine-management",
-        "resolution": "Resolve the include symlink and restore the real configuration target to root:root mode 0644; restore /etc/ssh and /etc/ssh/ssh_config.d to root:root mode 0755, and restore the symlink owner with chown -h when needed. Verify the effective owner and mode with stat -L, then require ssh -G TARGET and a real managed-machine probe to succeed. Do not bypass the invalid system configuration with an ssh -F wrapper.",
+        "resolution": "Run the shared read-only ssh -G preflight before managed-machine and parity network SSH. On a matching ownership failure, return this knowledge id and inspect the reported include, symlink target, and ancestors without mutation. Resolve the include symlink and restore the real configuration target to root:root mode 0644; restore /etc/ssh and /etc/ssh/ssh_config.d to root:root mode 0755, and restore the symlink owner with chown -h when needed. Verify the effective owner and mode with stat -L, then require ssh -G TARGET and a real managed-machine probe to succeed. Do not bypass the invalid system configuration with an ssh -F wrapper, and do not auto-repair privileged paths.",
         "root_cause": "The system-wide OpenSSH client configuration include, its symlink target, or an ancestor directory lost root ownership or became writable by non-root users. OpenSSH rejects the system configuration before reading target-specific user settings.",
         "scope": {
           "component": [
@@ -49,14 +59,15 @@
         "verification": {
           "checks": [
             "Host execution view reported /etc/ssh and /etc/ssh/ssh_config.d as root:root mode 0755 and the resolved include target as root:root mode 0644.",
-            "ssh -G 90.90.97.14 completed without the prior bad-owner error after ownership was restored."
+            "ssh -G 90.90.97.14 completed without the prior bad-owner error after ownership was restored.",
+            "Regression tests classify the bad-owner fingerprint, keep the preflight read-only, and stop parity before low-level sync."
           ],
           "status": "passed"
         }
       },
-      "source": "promoted from candidate machine-management-openssh-system-client-configuration-must-retain--8dbee5dde4; stable evidence: https://man.openbsd.org/ssh_config.5",
-      "status": "experimental",
-      "updated_at": "2026-07-28"
+      "source": "promoted from candidate machine-management-openssh-system-client-configuration-must-retain--8dbee5dde4; regression protection: vaws_ssh_preflight.py and workflow tests",
+      "status": "active",
+      "updated_at": "2026-08-11"
     },
     {
       "applicable_versions": "remote-code-parity runtime installs that need internet access through a local proxy from VAWS remote containers.",

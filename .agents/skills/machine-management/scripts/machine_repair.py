@@ -28,6 +28,7 @@ from _workflow_common import (  # noqa: E402
     probe_host,
     resolve_password_args,
     resolve_workflow_image,
+    ssh_client_preflight_blocker,
     status_payload,
     sync_mesh,
     upsert_machine_record,
@@ -88,6 +89,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         assert image is not None
 
+        target = host_target(
+            host=record["host"]["ip"],
+            user=record["host"]["user"],
+            port=record["host"]["port"],
+        )
+        emit_progress(action="repair", phase="ssh-preflight", message="checking local OpenSSH configuration", machine=record["alias"])
+        ssh_preflight = ssh_client_preflight_blocker(target)
+        if ssh_preflight is not None:
+            print_json(ssh_preflight)
+            return 0
+
         recorded_machine_type_hint = None
         if record["host"].get("machine_type"):
             recorded_machine_type_hint = machine_ops.normalize_machine_type(record["host"]["machine_type"])
@@ -136,11 +148,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         password = resolve_password_args(args)
         emit_progress(action="repair", phase="host-auth", message="checking host key SSH", machine=record["alias"])
-        target = host_target(
-            host=record["host"]["ip"],
-            user=record["host"]["user"],
-            port=record["host"]["port"],
-        )
         try:
             private_key = machine_ops.private_key_for_public_key(machine_ops.find_public_key(args.public_key_file))
         except machine_ops.MachineManagementError:

@@ -8,6 +8,19 @@ required. Inspect it with `python3 .agents/scripts/workspace_identity.py summary
 
 Prefer the task-oriented wrappers. Treat the low-level helpers as fallback maintenance tools.
 
+## Inspect the local OpenSSH client configuration
+
+This check parses the effective target configuration without connecting or
+changing `/etc/ssh`:
+
+```bash
+python3 .agents/scripts/ssh_preflight.py 173.125.1.2 --user root --port 22
+```
+
+When it reports a system config ownership problem, resolve the reported
+symlink and inspect the path with `stat -L`. Repair requires a separate,
+explicitly approved privileged operation; do not bypass it with `ssh -F`.
+
 ## Public workflow wrappers
 
 macOS / Linux / WSL:

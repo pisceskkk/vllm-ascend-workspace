@@ -30,6 +30,7 @@ from _workflow_common import (  # noqa: E402
     public_key_needs_input_payload,
     resolve_password_args,
     resolve_workflow_image,
+    ssh_client_preflight_blocker,
     status_payload,
     sync_mesh,
     upsert_machine_record,
@@ -113,6 +114,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         assert image is not None
 
+        target_host = existing["host"]["ip"] if existing is not None else args.host
+        target_user = existing["host"]["user"] if existing is not None else args.host_user
+        target_port = existing["host"]["port"] if existing is not None else args.host_port
+        target = host_target(host=target_host, user=target_user, port=target_port)
+        emit_progress(action="add", phase="ssh-preflight", message="checking local OpenSSH configuration", machine=alias)
+        ssh_preflight = ssh_client_preflight_blocker(target)
+        if ssh_preflight is not None:
+            print_json(ssh_preflight)
+            return 0
+
         existing_machine_type_hint = None
         if existing is not None:
             if existing["host"].get("machine_type"):
@@ -159,11 +170,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             if verified.get("status") == "blocked":
                 print_json(verified)
                 return 0
-
-        target_host = existing["host"]["ip"] if existing is not None else args.host
-        target_user = existing["host"]["user"] if existing is not None else args.host_user
-        target_port = existing["host"]["port"] if existing is not None else args.host_port
-        target = host_target(host=target_host, user=target_user, port=target_port)
 
         private_key = None
         public_key_needs_input = None

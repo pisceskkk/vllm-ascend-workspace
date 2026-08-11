@@ -33,6 +33,7 @@ from vaws_local_state import (  # noqa: E402
     profile_summary,
     utc_now_iso,
 )
+from vaws_ssh_preflight import blocked_status_payload, ssh_client_preflight  # noqa: E402
 
 Status = Literal[
     "ready",
@@ -96,6 +97,19 @@ def status_payload(
         payload["message"] = message
     payload.update(extra)
     return payload
+
+
+def ssh_client_preflight_blocker(
+    target: machine_ops.SshTarget,
+) -> dict[str, Any] | None:
+    result = ssh_client_preflight(
+        target.host,
+        port=target.port,
+        user=target.user,
+    )
+    if result.get("status") == "ready":
+        return None
+    return blocked_status_payload(result, action="ssh-client-preflight")
 
 
 def profile_needs_input_payload() -> dict[str, Any]:

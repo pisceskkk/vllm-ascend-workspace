@@ -31,6 +31,11 @@ These should not trigger `machine-management` unless machine readiness is the ob
 
 ### Universal
 
+- add, verify, repair, and remove run a read-only `ssh -G` preflight before
+  their first network SSH attempt
+- a system SSH config ownership failure returns `status: blocked`, action
+  `ssh-client-preflight`, and the matching formal knowledge id
+- the preflight does not use `ssh -F` and does not modify `/etc/ssh`
 - the skill reads local profile and inventory state before mutating remote state
 - the skill uses `.vaws-local/` as the canonical local runtime-state directory
 - the skill prefers the public task wrappers over low-level helper CLIs
@@ -127,6 +132,8 @@ These specific mistakes should no longer be part of the normal path:
 - agent should not need `inventory.py put ...` just to finish a normal add flow
 - agent should not need `manage_machine.py remove-container ... --container-name ...` for a normal remove flow
 - agent should not need to inspect helper `--help` output just to recover from ordinary add / verify / repair / remove work
+- a broken local system-wide SSH config should not be retried against every
+  managed target as though each remote machine independently failed
 
 ## Manual regression checklist
 

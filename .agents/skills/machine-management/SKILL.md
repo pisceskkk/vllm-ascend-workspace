@@ -32,6 +32,10 @@ Ready does **not** imply code sync, rebuild, serving, or benchmark readiness.
 ## Critical rules
 
 - Probe first.
+- Before the first network SSH attempt, run the shared read-only `ssh -G`
+  client-config preflight. Fail closed with the formal knowledge id when
+  OpenSSH rejects a system config path; never bypass it with `ssh -F` and never
+  auto-repair `/etc/ssh` permissions.
 - Be idempotent and conservative.
 - Keep mutations bounded to the requested machine.
 - Treat the bare-metal host as a maintenance plane, not a developer workspace.
@@ -147,6 +151,7 @@ machine profile later changes. Alias changes never rename existing containers.
 
 Before any mutation, inspect:
 
+- whether the local OpenSSH client can parse the effective target configuration
 - local machine profile state
 - local inventory state
 - whether a local public key already exists

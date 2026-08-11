@@ -20,6 +20,7 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 from vaws_session_state import load_session_lookup  # noqa: E402
+from vaws_ssh_preflight import blocked_status_payload, ssh_client_preflight  # noqa: E402
 
 
 DEFAULT_CONTAINER_USER = 'root'
@@ -243,6 +244,15 @@ def main() -> int:
                 'container_identity': derived['container_identity'],
             }))
             return 0
+
+    ssh_preflight = ssh_client_preflight(
+        derived['container_host'],
+        port=int(derived['container_port']),
+        user=derived['container_user'],
+    )
+    if ssh_preflight.get('status') != 'ready':
+        print(json_dump(blocked_status_payload(ssh_preflight, action='ssh-client-preflight')))
+        return 2
 
     result = subprocess.run(low_level_cmd)
     return result.returncode

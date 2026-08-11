@@ -18,6 +18,14 @@ python3 .agents/scripts/remote_sync_apply.py --session-id <id> --mode materializ
 
 Prefer the helper scripts in `scripts/` when possible.
 
+The normal `parity_sync.py` path checks the resolved container endpoint with
+the shared read-only OpenSSH preflight before low-level sync. To inspect the
+same local client configuration directly:
+
+```bash
+python3 .agents/scripts/ssh_preflight.py 10.0.0.8 --user root --port 46001
+```
+
 ## Check sync mode for a container
 
 ```bash

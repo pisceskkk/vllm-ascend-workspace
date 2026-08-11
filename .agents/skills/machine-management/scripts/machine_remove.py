@@ -17,11 +17,13 @@ from _workflow_common import (  # noqa: E402
     cleanup_parity_state,
     emit_progress,
     find_record,
+    host_target,
     list_records,
     machine_summary,
     print_json,
     remove_container,
     remove_machine_record,
+    ssh_client_preflight_blocker,
     status_payload,
 )
 
@@ -46,6 +48,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                     message=f"no managed machine found for {args.machine}",
                 )
             )
+            return 0
+
+        target = host_target(
+            host=record["host"]["ip"],
+            user=record["host"]["user"],
+            port=record["host"]["port"],
+        )
+        emit_progress(action="remove", phase="ssh-preflight", message="checking local OpenSSH configuration", machine=record["alias"])
+        ssh_preflight = ssh_client_preflight_blocker(target)
+        if ssh_preflight is not None:
+            print_json(ssh_preflight)
             return 0
 
         emit_progress(action="remove", phase="mesh", message="cleaning up peer mesh trust", machine=record["alias"])
