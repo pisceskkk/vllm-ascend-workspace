@@ -183,6 +183,12 @@ REMOTE_RUNTIME_ENV_PASSTHROUGH = (
     'CXX_COMPILER',
     'VERBOSE',
     'ASCEND_HOME_PATH',
+    'http_proxy',
+    'https_proxy',
+    'no_proxy',
+    'HTTP_PROXY',
+    'HTTPS_PROXY',
+    'NO_PROXY',
 )
 
 RUNTIME_INSTALL_ENV_KEYS = (
@@ -201,6 +207,12 @@ RUNTIME_INSTALL_ENV_KEYS = (
     'C_COMPILER',
     'CXX_COMPILER',
     'ASCEND_HOME_PATH',
+    'http_proxy',
+    'https_proxy',
+    'no_proxy',
+    'HTTP_PROXY',
+    'HTTPS_PROXY',
+    'NO_PROXY',
 )
 
 
@@ -284,7 +296,8 @@ def redact_url_value(value: str) -> str:
 def redact_runtime_env(env: dict[str, str]) -> dict[str, str]:
     redacted: dict[str, str] = {}
     for key, value in env.items():
-        if key.endswith('_URL') or 'INDEX' in key or 'PATH' in key:
+        normalized_key = key.lower()
+        if key.endswith('_URL') or 'INDEX' in key or 'PATH' in key or 'proxy' in normalized_key:
             redacted[key] = redact_url_value(value)
         else:
             redacted[key] = value

@@ -45,6 +45,21 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 - import smoke runs outside the workspace root, imports public vLLM APIs, and rejects an outer repository directory resolved as a namespace package
 - runtime install records its effective cache/compile/index env in the manifest, final summary, and runtime state with URL userinfo redacted
 - optional runtime environment metadata has a bounded timeout and cannot block parity
+- `proxy_command.py <remote-ip>` prefers a local IPv4 address whose declared
+  subnet contains the remote server IP and otherwise applies only an explicit
+  mapping from `proxy-routes.json`
+- callers can disable route mappings for strict CIDR-only matching
+- proxy selection prefers the longest declared prefix or most-specific route
+- sharing only the first IPv4 octet does not authorize a proxy route
+- WSL proxy discovery includes Windows host interfaces instead of relying only
+  on the WSL virtual adapter
+- proxy command generation fails closed when no declared-subnet or explicitly
+  mapped local address is available
+- generated proxy commands reference credential environment variables and do
+  not print, persist, or commit real credential values
+- the committed proxy credential file contains placeholders only
+- generated remote commands export lower- and uppercase HTTP(S) proxy and
+  no-proxy variables
 
 ### Repo graph and snapshotting
 

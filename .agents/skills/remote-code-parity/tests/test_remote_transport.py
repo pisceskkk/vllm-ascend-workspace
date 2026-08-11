@@ -67,6 +67,30 @@ class RemoteParityTransportTests(unittest.TestCase):
             )
         self.assertEqual(result, {"MAX_JOBS": "8"})
 
+    def test_runtime_install_env_accepts_proxy_variables(self) -> None:
+        expected = {
+            "http_proxy",
+            "https_proxy",
+            "no_proxy",
+            "HTTP_PROXY",
+            "HTTPS_PROXY",
+            "NO_PROXY",
+        }
+
+        self.assertTrue(expected.issubset(parity.REMOTE_RUNTIME_ENV_PASSTHROUGH))
+        self.assertTrue(expected.issubset(parity.RUNTIME_INSTALL_ENV_KEYS))
+
+    def test_runtime_env_redacts_proxy_userinfo(self) -> None:
+        redacted = parity.redact_runtime_env(
+            {"https_proxy": "http://real-user:real-password@10.0.0.5:8080"}
+        )
+
+        self.assertEqual(
+            redacted["https_proxy"],
+            "http://***@10.0.0.5:8080",
+        )
+        self.assertNotIn("real-password", redacted["https_proxy"])
+
     def test_long_command_script_uses_staged_file(self) -> None:
         endpoint = common.SshEndpoint(host="host", port=22, user="root")
         script = "true\n" * 1024

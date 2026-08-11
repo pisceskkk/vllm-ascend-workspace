@@ -227,6 +227,63 @@ python3 .agents/skills/remote-code-parity/scripts/gc_runtime_cache.py \
   --dry-run
 ```
 
+## Generate proxy commands for one remote server
+
+Create an ignored credential file from the placeholder template and replace the
+two values locally:
+
+```bash
+mkdir -p .vaws-local/proxy
+cp .agents/skills/remote-code-parity/references/proxy-credentials.example \
+  .vaws-local/proxy/credentials.env
+. .vaws-local/proxy/credentials.env
+```
+
+Input the remote server IPv4 address. The helper probes Linux/WSL and Windows
+host interfaces, prefers a declared-subnet match, then applies the workspace's
+explicit `proxy-routes.json` managed-network mappings, and prints a command to
+run in the intended shell:
+
+```bash
+python3 .agents/skills/remote-code-parity/scripts/proxy_command.py 10.20.30.99
+```
+
+Inspect the selected local interface together with the generated command:
+
+```bash
+python3 .agents/skills/remote-code-parity/scripts/proxy_command.py \
+  10.20.30.99 --json
+```
+
+Render the local `gost` listener command for the selected address:
+
+```bash
+python3 .agents/skills/remote-code-parity/scripts/proxy_command.py \
+  10.20.30.99 --command local-listener
+```
+
+When automatic discovery is unavailable, provide a deterministic candidate:
+
+```bash
+python3 .agents/skills/remote-code-parity/scripts/proxy_command.py \
+  10.20.30.99 --source none --candidate Ethernet=10.20.30.5/24
+```
+
+The generated commands reference `VAWS_PROXY_USERNAME` and
+`VAWS_PROXY_PASSWORD`; the helper never expands or prints their values. Keep
+credentials URL-safe because they are used as URL userinfo.
+
+For strict CIDR-only matching, disable configured route mappings:
+
+```bash
+python3 .agents/skills/remote-code-parity/scripts/proxy_command.py \
+  10.20.30.99 --strict-subnet
+```
+
+Do not broaden a mapping to an entire address family merely because two
+addresses share the first octet. Add only reviewed remote and local networks to
+`references/proxy-routes.json`.
+
 ## Recommended upper-skill routing rule
 
 When a serving / benchmark / smoke workflow is about to execute remotely:

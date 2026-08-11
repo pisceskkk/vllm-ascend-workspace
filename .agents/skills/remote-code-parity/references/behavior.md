@@ -226,6 +226,31 @@ A trustworthy parity result records:
 - whether first-time consent was consulted or blocked
 - any mismatch between the manifest and runtime state
 
+## Local proxy address selection
+
+When a remote container needs a proxy hosted on a multi-homed local client:
+
+- discover active IPv4 addresses and prefix lengths with the native `ip` tool
+  and, under WSL, Windows PowerShell `Get-NetIPAddress`
+- prefer an address whose declared subnet contains the remote server IP
+- when VPN or tunnel interfaces expose `/32` addresses, use only the explicit
+  remote-network to local-network mappings in `proxy-routes.json`; do not infer
+  a route from a shared first octet
+- prefer the longest declared prefix or most-specific configured route, then
+  the Windows-owned interface under WSL so a host-side proxy is not replaced by
+  the WSL virtual adapter
+- fail closed instead of silently choosing an unrelated adapter when neither
+  the declared subnet nor configured route mapping matches; allow callers to
+  disable mappings with `--strict-subnet`
+- render commands that reference credential environment variables; never read,
+  print, or persist the credential values
+- keep real credentials under ignored local state and commit only the placeholder
+  template
+- export lower- and uppercase HTTP(S) proxy and no-proxy variables for remote
+  install compatibility
+- when rendering a local `gost` listener, bind to the selected address and run
+  it on the operating system that owns that interface
+
 ## Runtime install compatibility
 
 - discover the runtime Python dynamically from `/usr/local/python*/bin/python3`, then fall back to `python3` or `python`

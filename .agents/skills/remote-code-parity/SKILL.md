@@ -91,6 +91,28 @@ Container-local cache layout under the cache root:
 
 Container commands in this skill assume Linux shells.
 
+## Remote-reachable local proxy helper
+
+For a remote runtime that must reach a proxy on the local developer machine,
+use `scripts/proxy_command.py <remote-ip>`. The helper inspects local IPv4
+interfaces (including Windows interfaces when invoked from WSL), prefers a
+declared-subnet match, then applies only the explicit managed-network mappings
+in `references/proxy-routes.json`, and prints a shell command that exports
+lower- and uppercase proxy variables.
+
+- Keep real credentials in an ignored local file such as
+  `.vaws-local/proxy/credentials.env`; start from
+  `references/proxy-credentials.example`.
+- The generated command references `VAWS_PROXY_USERNAME` and
+  `VAWS_PROXY_PASSWORD`; it never reads or prints their values.
+- Fail closed when no local interface matches either the declared subnet or an
+  explicit route mapping. Use `--strict-subnet` to disable route mappings.
+- Use `--command local-listener` to render a `gost` listener command for the
+  selected local address. Run that listener on the operating system that owns
+  the selected interface.
+- Use `--candidate INTERFACE=ADDRESS/PREFIX --source none` for an explicit,
+  deterministic override when automatic interface discovery is unavailable.
+
 ## Script-first entry points
 
 Normal agent entrypoint:
@@ -123,6 +145,11 @@ Low-level helper:
 Optional cache cleanup helper:
 
 - POSIX: `python3 .agents/skills/remote-code-parity/scripts/gc_runtime_cache.py ...`
+
+Proxy command helper:
+
+- POSIX: `python3 .agents/skills/remote-code-parity/scripts/proxy_command.py <remote-ip>`
+- Windows: `py -3 .agents/skills/remote-code-parity/scripts/proxy_command.py <remote-ip>`
 
 Reference files:
 
@@ -233,7 +260,11 @@ After the first approved replacement, reinstall only when one of the following t
 
 - `vllm`: `requirements*`, `pyproject.toml`, `setup.*`, `CMake*`, `cmake/**`, `csrc/**`, and common native-source suffixes
 - `vllm-ascend`: same as `vllm`, plus `vllm_ascend/_cann_ops_custom/**`
-- pure Python, docs, configs, tests, and ordinary scripts: parity only, no rebuild
+- for both `vllm` and `vllm-ascend`, a change whose complete diff is limited to
+  Python source files (`.py`) only needs source materialization followed by a
+  full restart of the API server, EngineCore, and workers; do not reinstall the
+  packages or rebuild native/custom operators
+- docs, configs, tests, and ordinary scripts: parity only, no rebuild
 
 **Trigger 2 — commit drift from last sync:**
 

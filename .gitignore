@@ -22,6 +22,7 @@ docs/superpowers/
 .remote-dev/state/
 .remote-dev/endpoints.local.json
 .machine-inventory.json
+scripts/proxy.sh
 .worktrees/
 
 # Cursor IDE — ignore all except rules and skills (those are tracked / shared)

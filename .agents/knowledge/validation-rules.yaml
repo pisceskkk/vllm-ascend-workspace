@@ -1,14 +1,119 @@
 {
-  "schema_version": 1,
-  "kind": "validation-rules",
-  "updated_at": "2026-07-25",
   "entries": [
     {
-      "id": "graph-path-requires-eager-graph-comparison",
-      "source": "workspace skill roadmap and vllm-ascend-graph-debug contract",
       "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
+      "id": "attention-backend-change-requires-backend-correctness",
+      "rule": {
+        "category": "attention-backend",
+        "path_patterns": [
+          "(?i)(attention|attn_backend)"
+        ],
+        "recommended_checks": [
+          "correctness:graph"
+        ],
+        "required_checks": [
+          "correctness:affected-attention-backend",
+          "correctness:eager"
+        ]
+      },
+      "source": "workspace skill roadmap",
       "status": "active",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "build-change-requires-build-and-import",
+      "rule": {
+        "category": "build",
+        "path_patterns": [
+          "(?i)(cmakelists|pyproject|setup\\.py|requirements|dockerfile|\\.github/workflows)"
+        ],
+        "required_checks": [
+          "build:package",
+          "build:import-smoke"
+        ]
+      },
+      "source": "workspace skill roadmap",
+      "status": "active",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "custom-op-change-requires-operator-matrix",
+      "rule": {
+        "category": "custom-op",
+        "path_patterns": [
+          "(?i)(custom_op|ops/|kernel)"
+        ],
+        "recommended_checks": [
+          "performance:operator-microbenchmark"
+        ],
+        "required_checks": [
+          "operator:dtype-shape-layout",
+          "correctness:model-smoke"
+        ]
+      },
+      "source": "workspace skill roadmap",
+      "status": "experimental",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "All workspace workflows that invoke GitHub CLI under a restricted default network sandbox",
+      "id": "github-cli-network-enabled-auth-validation",
+      "rule": {
+        "avoidance": "Do not conclude that a token is invalid from sandbox-only gh auth status output. Record whether networking was enabled, retry the same read-only check with network access, and never expose or persist token values.",
+        "candidate_id": "github-cli-auth-status-requires-network-enabled-execution",
+        "candidate_ids": [
+          "github-cli-auth-status-requires-network-enabled-execution"
+        ],
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "pull-request",
+            "stable": true,
+            "uri": "https://github.com/vllm-project/vllm-ascend/pull/12982"
+          }
+        ],
+        "fingerprints": [
+          "gh auth status reports \"the token in hosts.yml is invalid\" in a network-restricted sandbox",
+          "the same hosts.yml succeeds when gh auth status is rerun with network-enabled execution",
+          "network-enabled gh api commands succeed despite a preceding sandbox-only authentication failure"
+        ],
+        "first_seen_at": "2026-07-28T06:30:18Z",
+        "last_verified_at": "2026-07-28T06:30:18Z",
+        "occurrence_count": 1,
+        "owner_skill": "repo-init",
+        "resolution": "Run gh authentication checks and GitHub API commands in a network-enabled or explicitly escalated execution context. Confirm credential validity with network-enabled gh auth status and, when needed, a read-only API command such as gh repo view or gh pr list before asking the user to re-authenticate.",
+        "root_cause": "gh auth status verifies credentials against GitHub. When the command runs in an execution context without outbound network access, that online verification can fail and be surfaced as an authentication failure, creating a false negative that is indistinguishable from an actually invalid token if execution context is ignored.",
+        "scope": {
+          "commands": [
+            "gh auth status",
+            "gh pr list",
+            "gh pr create",
+            "gh pr view"
+          ],
+          "component": "github-cli",
+          "execution_environment": "Codex workspace with restricted default network sandbox"
+        },
+        "summary": "Validate GitHub CLI credentials only from a network-enabled execution environment",
+        "symptom": "A sandboxed gh auth status invocation reports an invalid token even though the user has authenticated successfully and network-enabled GitHub API calls work.",
+        "verification": {
+          "checks": [
+            "Sandboxed gh auth status reported the token as invalid after authentication was restored.",
+            "Network-enabled gh auth status using the same hosts.yml reported the active account and expected scopes.",
+            "Network-enabled gh pr list, gh pr create, and gh pr view completed successfully.",
+            "Draft PR https://github.com/vllm-project/vllm-ascend/pull/12982 was created and read back successfully."
+          ],
+          "status": "passed"
+        }
+      },
+      "source": "promoted from candidate github-cli-auth-status-requires-network-enabled-execution; stable evidence: https://github.com/vllm-project/vllm-ascend/pull/12982",
+      "status": "experimental",
+      "updated_at": "2026-07-28"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "graph-path-requires-eager-graph-comparison",
       "rule": {
         "category": "graph",
         "path_patterns": [
@@ -19,167 +124,54 @@
           "correctness:graph"
         ],
         "route_on_divergence": "vllm-ascend-graph-debug"
-      }
-    },
-    {
-      "id": "custom-op-change-requires-operator-matrix",
-      "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "experimental",
-      "rule": {
-        "category": "custom-op",
-        "path_patterns": [
-          "(?i)(custom_op|ops/|kernel)"
-        ],
-        "required_checks": [
-          "operator:dtype-shape-layout",
-          "correctness:model-smoke"
-        ],
-        "recommended_checks": [
-          "performance:operator-microbenchmark"
-        ]
-      }
-    },
-    {
-      "id": "parallel-metadata-change-requires-rank-consistency",
-      "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "experimental",
-      "rule": {
-        "category": "parallel-metadata",
-        "path_patterns": [
-          "(?i)(parallel|metadata|communicator|process_group)"
-        ],
-        "required_checks": [
-          "correctness:multi-rank-metadata-consistency"
-        ],
-        "route_on_hang": "vllm-ascend-distributed-debug"
-      }
-    },
-    {
-      "id": "model-runner-change-requires-override-and-smoke",
-      "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
+      },
+      "source": "workspace skill roadmap and vllm-ascend-graph-debug contract",
       "status": "active",
-      "rule": {
-        "category": "model-runner",
-        "path_patterns": [
-          "(?i)(model_runner|runner/)"
-        ],
-        "required_checks": [
-          "compatibility:vllm-ascend-override",
-          "build:import-smoke",
-          "correctness:single-card-model-smoke"
-        ]
-      }
+      "updated_at": "2026-07-25"
     },
     {
-      "id": "attention-backend-change-requires-backend-correctness",
-      "source": "workspace skill roadmap",
       "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "active",
-      "rule": {
-        "category": "attention-backend",
-        "path_patterns": [
-          "(?i)(attention|attn_backend)"
-        ],
-        "required_checks": [
-          "correctness:affected-attention-backend",
-          "correctness:eager"
-        ],
-        "recommended_checks": [
-          "correctness:graph"
-        ]
-      }
-    },
-    {
       "id": "kv-cache-change-requires-cache-feature-matrix",
-      "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "active",
       "rule": {
         "category": "kv-cache",
         "path_patterns": [
           "(?i)(kv_cache|prefix_cache|block_table)"
         ],
+        "recommended_checks": [
+          "correctness:chunked-prefill"
+        ],
         "required_checks": [
           "correctness:kv-cache",
           "correctness:prefix-cache"
+        ]
+      },
+      "source": "workspace skill roadmap",
+      "status": "active",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "kv-connector-change-requires-transfer-smoke",
+      "rule": {
+        "category": "kv-connector",
+        "path_patterns": [
+          "(?i)(nixl|mooncake|kv_connector|kv_transfer|disaggreg)"
         ],
         "recommended_checks": [
-          "correctness:chunked-prefill"
-        ]
-      }
-    },
-    {
-      "id": "scheduler-change-requires-online-cases",
-      "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "active",
-      "rule": {
-        "category": "scheduler",
-        "path_patterns": [
-          "(?i)(scheduler|request_queue)"
+          "performance:pd-serving"
         ],
         "required_checks": [
-          "correctness:online-chat",
-          "correctness:mixed-request-shapes"
-        ],
-        "recommended_checks": [
-          "performance:online-serving"
+          "correctness:kv-transfer-smoke",
+          "correctness:prefill-decode-smoke"
         ]
-      }
-    },
-    {
-      "id": "worker-change-requires-multi-rank-smoke",
+      },
       "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
       "status": "active",
-      "rule": {
-        "category": "worker",
-        "path_patterns": [
-          "(?i)(worker|executor)"
-        ],
-        "required_checks": [
-          "correctness:single-rank-smoke",
-          "correctness:multi-rank-smoke"
-        ],
-        "route_on_hang": "vllm-ascend-distributed-debug"
-      }
+      "updated_at": "2026-07-25"
     },
     {
-      "id": "quantization-change-requires-dtype-and-model-smoke",
-      "source": "workspace skill roadmap",
       "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "active",
-      "rule": {
-        "category": "quantization",
-        "path_patterns": [
-          "(?i)(quant|w8a8|fp8|int8)"
-        ],
-        "required_checks": [
-          "operator:quantized-dtype-shape",
-          "correctness:quantized-model-smoke"
-        ],
-        "recommended_checks": [
-          "performance:quantized-model"
-        ]
-      }
-    },
-    {
       "id": "model-adapter-change-requires-model-smoke",
-      "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "active",
       "rule": {
         "category": "model-adapter",
         "path_patterns": [
@@ -190,51 +182,156 @@
           "correctness:dummy-weight-smoke",
           "correctness:real-weight-smoke"
         ]
-      }
+      },
+      "source": "workspace skill roadmap",
+      "status": "active",
+      "updated_at": "2026-07-25"
     },
     {
-      "id": "kv-connector-change-requires-transfer-smoke",
-      "source": "workspace skill roadmap",
       "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "active",
+      "id": "model-runner-change-requires-override-and-smoke",
       "rule": {
-        "category": "kv-connector",
+        "category": "model-runner",
         "path_patterns": [
-          "(?i)(nixl|mooncake|kv_connector|kv_transfer|disaggreg)"
+          "(?i)(model_runner|runner/)"
         ],
         "required_checks": [
-          "correctness:kv-transfer-smoke",
-          "correctness:prefill-decode-smoke"
+          "compatibility:vllm-ascend-override",
+          "build:import-smoke",
+          "correctness:single-card-model-smoke"
+        ]
+      },
+      "source": "workspace skill roadmap",
+      "status": "active",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "parallel-metadata-change-requires-rank-consistency",
+      "rule": {
+        "category": "parallel-metadata",
+        "path_patterns": [
+          "(?i)(parallel|metadata|communicator|process_group)"
+        ],
+        "required_checks": [
+          "correctness:multi-rank-metadata-consistency"
+        ],
+        "route_on_hang": "vllm-ascend-distributed-debug"
+      },
+      "source": "workspace skill roadmap",
+      "status": "experimental",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "all workspace-managed vllm and vllm-ascend revisions deployed from an editable or materialized runtime source tree",
+      "id": "python-only-vllm-ascend-rollback-materialize-restart",
+      "rule": {
+        "avoidance": "Do not apply this shortcut when either repository changes requirements, pyproject, setup, CMake/cmake, csrc, generated operator artifacts, native source/header files, native ABI, or dependency metadata. Also do not use it when the runtime is not already installed as an editable/materialized source tree; use the install/build path in those cases.",
+        "candidate_id": "python-only-vllm-ascend-rollback-no-operator-rebuild",
+        "candidate_ids": [
+          "python-only-vllm-ascend-rollback-no-operator-rebuild"
+        ],
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "commit-range",
+            "stable": true,
+            "uri": "git:c628bdd4b..f22db9f10"
+          },
+          {
+            "kind": "run-artifact",
+            "stable": false,
+            "uri": ".vaws-local/correctness/dsa-o-proj-dcp-off-20260728/rollback-full-20260728/evidence/manifest-1785207492-cf3a94c9.json"
+          },
+          {
+            "kind": "code",
+            "stable": true,
+            "uri": ".agents/skills/remote-code-parity/scripts/remote_code_parity.py:VLLM_REINSTALL_PATTERNS"
+          }
+        ],
+        "fingerprints": [
+          "the complete vllm and/or vllm-ascend diff contains only .py files",
+          "the diff contains no reinstall-trigger path, native ABI change, generated operator artifact, or dependency metadata change",
+          "apply_mode=materialize updates the runtime source tree while skipping package reinstall and native/custom-operator rebuild"
+        ],
+        "first_seen_at": "2026-07-28T03:00:04Z",
+        "last_verified_at": "2026-07-28T03:00:04Z",
+        "occurrence_count": 1,
+        "owner_skill": "remote-code-parity",
+        "resolution": "Verify the complete change across vllm and vllm-ascend is limited to .py files, materialize the exact source snapshots, and fully restart the API server, EngineCore, and workers so no process retains old modules. Skip package reinstall and native/custom-operator compilation for both repositories.",
+        "root_cause": "Pure Python modifications in either vllm or vllm-ascend do not change their compiled extensions or Ascend custom-operator binaries. On an editable/materialized runtime source tree, materializing the exact snapshots and fully restarting all Python processes is sufficient for the new Python logic to take effect.",
+        "scope": {
+          "change_type": [
+            "python-only-change"
+          ],
+          "component": [
+            "vllm-python-source",
+            "vllm-ascend-python-source",
+            "remote-code-parity",
+            "native-extension-build",
+            "custom-operator-build"
+          ]
+        },
+        "summary": "Pure Python vllm or vllm-ascend changes require materialize and restart, not operator rebuild",
+        "symptom": "A vllm or vllm-ascend change that touches only Python sources is treated as if native extensions or custom Ascend operators must be rebuilt.",
+        "verification": {
+          "checks": [
+            "The full six-commit rollback diff contained 20 changed paths and every path ended in .py.",
+            "Remote-code-parity snapshot 20260728T024845Z-a4aa39cf materialized successfully with reinstall=skipped-by-apply-mode.",
+            "The rollback-point test tests/ut/attention/test_sfa_o_proj_tp.py passed 2 tests in the dcp29 container.",
+            "The W4A8 TP8 eager service reached healthy and exposed /v1/models after a full worker restart without reinstall or operator rebuild.",
+            "The shared VLLM_REINSTALL_PATTERNS excludes .py paths for vllm, and vllm-ascend extends that same pattern set only with its generated custom-operator directory."
+          ],
+          "status": "passed"
+        }
+      },
+      "source": "generalized from promoted candidate python-only-vllm-ascend-rollback-no-operator-rebuild and the shared vllm/vllm-ascend reinstall trigger matrix; stable evidence: git:c628bdd4b..f22db9f10 and remote_code_parity.py",
+      "status": "experimental",
+      "updated_at": "2026-07-28"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "quantization-change-requires-dtype-and-model-smoke",
+      "rule": {
+        "category": "quantization",
+        "path_patterns": [
+          "(?i)(quant|w8a8|fp8|int8)"
         ],
         "recommended_checks": [
-          "performance:pd-serving"
-        ]
-      }
-    },
-    {
-      "id": "build-change-requires-build-and-import",
-      "source": "workspace skill roadmap",
-      "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
-      "status": "active",
-      "rule": {
-        "category": "build",
-        "path_patterns": [
-          "(?i)(cmakelists|pyproject|setup\\.py|requirements|dockerfile|\\.github/workflows)"
+          "performance:quantized-model"
         ],
         "required_checks": [
-          "build:package",
-          "build:import-smoke"
+          "operator:quantized-dtype-shape",
+          "correctness:quantized-model-smoke"
         ]
-      }
+      },
+      "source": "workspace skill roadmap",
+      "status": "active",
+      "updated_at": "2026-07-25"
     },
     {
-      "id": "test-change-requires-targeted-test-suite",
-      "source": "workspace skill roadmap",
       "applicable_versions": "all workspace-managed revisions",
-      "updated_at": "2026-07-25",
+      "id": "scheduler-change-requires-online-cases",
+      "rule": {
+        "category": "scheduler",
+        "path_patterns": [
+          "(?i)(scheduler|request_queue)"
+        ],
+        "recommended_checks": [
+          "performance:online-serving"
+        ],
+        "required_checks": [
+          "correctness:online-chat",
+          "correctness:mixed-request-shapes"
+        ]
+      },
+      "source": "workspace skill roadmap",
       "status": "active",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "test-change-requires-targeted-test-suite",
       "rule": {
         "category": "test",
         "path_patterns": [
@@ -243,7 +340,99 @@
         "required_checks": [
           "test:targeted-suite"
         ]
-      }
+      },
+      "source": "workspace skill roadmap",
+      "status": "active",
+      "updated_at": "2026-07-25"
+    },
+    {
+      "applicable_versions": "all vllm-ascend revisions that publish .github/vllm-main-verified.commit",
+      "id": "vllm-submodule-resolve-vllm-ascend-ci-pin",
+      "rule": {
+        "avoidance": "Do not hard-code the current vLLM commit in workspace knowledge or workflow logic. Treat a missing or invalid verified-main pin as unknown compatibility and stop before changing the submodule.",
+        "candidate_id": "repo-init-resolve-the-vllm-compatibility-ref-from-vllm-asc-fe75d952c8",
+        "candidate_ids": [
+          "repo-init-resolve-the-vllm-compatibility-ref-from-vllm-asc-fe75d952c8"
+        ],
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "code",
+            "stable": true,
+            "uri": ".agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py"
+          },
+          {
+            "kind": "acceptance-contract",
+            "stable": true,
+            "uri": ".agents/skills/repo-init/references/acceptance.md"
+          },
+          {
+            "kind": "ci-pin",
+            "stable": true,
+            "uri": "vllm-ascend/.github/vllm-main-verified.commit"
+          },
+          {
+            "kind": "parity-manifest",
+            "stable": false,
+            "uri": ".vaws-local/remote-code-parity/workspaces/vllm-ascend-workspace-7c8dfc91/manifests/20260810T080759Z-fb98bad2.json"
+          }
+        ],
+        "fingerprints": [
+          "vllm-ascend/.github/vllm-main-verified.commit exists",
+          "the local vllm submodule is being aligned for vllm-ascend validation",
+          "a previously hard-coded vllm main commit may no longer match current vllm-ascend ci"
+        ],
+        "first_seen_at": "2026-08-10T09:21:12Z",
+        "last_verified_at": "2026-08-10T09:21:12Z",
+        "occurrence_count": 1,
+        "owner_skill": "repo-init",
+        "resolution": "Resolve the revision at execution time with .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py, then checkout and verify vllm at the returned exact commit before building, syncing, or validating vllm-ascend.",
+        "root_cause": "The verified vLLM main revision is a moving compatibility contract owned by vllm-ascend CI, so a commit copied into documentation or an agent prompt becomes stale.",
+        "scope": {
+          "component": [
+            "vllm-submodule",
+            "vllm-ascend-ci-pin"
+          ],
+          "workflow": [
+            "workspace-initialization",
+            "upstream-compatibility-validation"
+          ]
+        },
+        "summary": "Resolve the vLLM compatibility ref from vllm-ascend's verified-main pin",
+        "symptom": "The local vllm submodule can drift from the exact vLLM main revision currently verified by vllm-ascend CI.",
+        "verification": {
+          "checks": [
+            "The resolver read vllm-ascend/.github/vllm-main-verified.commit and returned 0351e9aa1fdf1a51329d1906881528dfe61fc88e.",
+            "The local vllm submodule was checked out at exactly 0351e9aa1fdf1a51329d1906881528dfe61fc88e.",
+            "The materialized remote runtime recorded the same vLLM source head before SFA/CP validation."
+          ],
+          "status": "passed"
+        }
+      },
+      "source": "promoted from candidate repo-init-resolve-the-vllm-compatibility-ref-from-vllm-asc-fe75d952c8; stable evidence: .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py, .agents/skills/repo-init/references/acceptance.md, vllm-ascend/.github/vllm-main-verified.commit",
+      "status": "experimental",
+      "updated_at": "2026-08-10"
+    },
+    {
+      "applicable_versions": "all workspace-managed revisions",
+      "id": "worker-change-requires-multi-rank-smoke",
+      "rule": {
+        "category": "worker",
+        "path_patterns": [
+          "(?i)(worker|executor)"
+        ],
+        "required_checks": [
+          "correctness:single-rank-smoke",
+          "correctness:multi-rank-smoke"
+        ],
+        "route_on_hang": "vllm-ascend-distributed-debug"
+      },
+      "source": "workspace skill roadmap",
+      "status": "active",
+      "updated_at": "2026-07-25"
     }
-  ]
+  ],
+  "kind": "validation-rules",
+  "schema_version": 1,
+  "updated_at": "2026-08-10"
 }
