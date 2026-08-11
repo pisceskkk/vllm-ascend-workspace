@@ -27,6 +27,10 @@ This skill is optional. Do not treat it as a prerequisite for unrelated work.
 ## Critical rules
 
 - Probe first.
+- Treat GitHub authentication and network reachability as separate states.
+  Never turn a restricted or unknown-context `gh auth status` failure into an
+  `auth_failed` conclusion; rerun the read-only classifier in an explicitly
+  network-enabled context before asking the user to authenticate again.
 - Ask before every mutation category.
 - Preserve extra remotes such as `upstream2`.
 - Never write secrets or user-specific remotes into tracked files.
@@ -50,8 +54,14 @@ This skill is optional. Do not treat it as a prerequisite for unrelated work.
 
 Start with the probe script:
 
-- POSIX: `python3 .agents/skills/repo-init/scripts/repo_init_probe.py --compact`
-- Windows: `py -3 .agents/skills/repo-init/scripts/repo_init_probe.py --compact`
+- POSIX: `python3 .agents/skills/repo-init/scripts/repo_init_probe.py --compact --network-context unknown`
+- Windows: `py -3 .agents/skills/repo-init/scripts/repo_init_probe.py --compact --network-context unknown`
+
+When that result reports `auth_state: unverified` and
+`retry_required: network_enabled`, rerun
+`.agents/scripts/github_auth_probe.py --network-context enabled` from an
+explicitly network-enabled execution context. Only `auth_failed` from that
+second check authorizes a re-authentication prompt.
 
 Public machine-profile wrapper for broad init:
 
@@ -135,7 +145,8 @@ Treat this as the target only after the user approves it.
 Run the compact probe and summarize only the facts that matter:
 
 - whether `gh` exists
-- whether GitHub auth exists
+- whether GitHub auth is `authenticated`, `auth_failed`, or `unverified`, and
+  whether GitHub was reachable from the declared execution context
 - whether submodules are initialized
 - which forks exist
 - what each repo currently uses for `origin` and `upstream`

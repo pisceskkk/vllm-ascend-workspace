@@ -68,6 +68,13 @@ A successful run should satisfy all applicable items below.
 - chooses the correct platform install path for `gh`
 - offers a no-admin fallback when needed
 - verifies GitHub auth after login
+- reports GitHub `auth_state` and `network_state` separately
+- a restricted-context invalid-token message returns `unverified`, not
+  `auth_failed`, and requests a network-enabled retry
+- a successful `gh api user` returns `authenticated` even if `gh auth status`
+  failed first
+- only a network-enabled authentication rejection returns `auth_failed`
+- compact and full probe output do not contain token values or raw auth stderr
 - asks before generating or uploading SSH keys
 
 ### Submodules and topology

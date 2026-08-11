@@ -72,6 +72,16 @@
             "kind": "pull-request",
             "stable": true,
             "uri": "https://github.com/vllm-project/vllm-ascend/pull/12982"
+          },
+          {
+            "kind": "regression-test",
+            "stable": true,
+            "uri": ".agents/tests/test_github_auth.py"
+          },
+          {
+            "kind": "regression-test",
+            "stable": true,
+            "uri": ".agents/skills/repo-init/test_github_auth_probe.py"
           }
         ],
         "fingerprints": [
@@ -80,10 +90,10 @@
           "network-enabled gh api commands succeed despite a preceding sandbox-only authentication failure"
         ],
         "first_seen_at": "2026-07-28T06:30:18Z",
-        "last_verified_at": "2026-07-28T06:30:18Z",
+        "last_verified_at": "2026-08-11T12:22:09Z",
         "occurrence_count": 1,
         "owner_skill": "repo-init",
-        "resolution": "Run gh authentication checks and GitHub API commands in a network-enabled or explicitly escalated execution context. Confirm credential validity with network-enabled gh auth status and, when needed, a read-only API command such as gh repo view or gh pr list before asking the user to re-authenticate.",
+        "resolution": "Use the shared GitHub auth classifier to record auth_state and network_state separately. A restricted, unknown, timed-out, DNS, TLS, or other transport-failed check remains unverified and requests a network-enabled retry. Run the read-only classifier in a network-enabled or explicitly escalated execution context; treat a successful gh api user as authenticated even if gh auth status failed, and ask the user to re-authenticate only after the enabled check returns an explicit authentication rejection. Never print or persist token values or raw authentication stderr.",
         "root_cause": "gh auth status verifies credentials against GitHub. When the command runs in an execution context without outbound network access, that online verification can fail and be surfaced as an authentication failure, creating a false negative that is indistinguishable from an actually invalid token if execution context is ignored.",
         "scope": {
           "commands": [
@@ -102,14 +112,15 @@
             "Sandboxed gh auth status reported the token as invalid after authentication was restored.",
             "Network-enabled gh auth status using the same hosts.yml reported the active account and expected scopes.",
             "Network-enabled gh pr list, gh pr create, and gh pr view completed successfully.",
-            "Draft PR https://github.com/vllm-project/vllm-ascend/pull/12982 was created and read back successfully."
+            "Draft PR https://github.com/vllm-project/vllm-ascend/pull/12982 was created and read back successfully.",
+            "Regression tests keep restricted invalid-token output unverified, classify transport failures separately, accept API-user success, and require an enabled authentication rejection before auth_failed."
           ],
           "status": "passed"
         }
       },
-      "source": "promoted from candidate github-cli-auth-status-requires-network-enabled-execution; stable evidence: https://github.com/vllm-project/vllm-ascend/pull/12982",
-      "status": "experimental",
-      "updated_at": "2026-07-28"
+      "source": "promoted from candidate github-cli-auth-status-requires-network-enabled-execution; regression protection: vaws_github_auth.py and repo-init tests",
+      "status": "active",
+      "updated_at": "2026-08-11"
     },
     {
       "applicable_versions": "all workspace-managed revisions",

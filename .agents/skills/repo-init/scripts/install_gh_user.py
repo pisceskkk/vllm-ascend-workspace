@@ -147,7 +147,7 @@ def main() -> None:
     print("")
     print("Verify with:")
     print("  gh --version")
-    print("  gh auth status --hostname github.com")
+    print("  python3 .agents/scripts/github_auth_probe.py --network-context enabled")
 
 
 if __name__ == "__main__":

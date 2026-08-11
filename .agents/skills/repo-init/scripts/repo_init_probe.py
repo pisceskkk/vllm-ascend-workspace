@@ -34,6 +34,7 @@ from vaws_local_state import (  # noqa: E402
     profile_summary,
     workspace_identity_summary,
 )
+from vaws_github_auth import NETWORK_CONTEXTS, classify_github_auth  # noqa: E402
 
 from _profile_choice_common import (  # noqa: E402
     detect_git_username_candidate,
@@ -280,27 +281,25 @@ def inspect_repo(
     return result
 
 
-def gh_login() -> Dict[str, Any]:
+def gh_login(network_context: str = "unknown") -> Dict[str, Any]:
     gh_path = which("gh")
     if not gh_path:
-        return {"installed": False}
+        return {
+            "installed": False,
+            "auth_state": "not_installed",
+            "network_state": "unknown",
+            "network_context": network_context,
+            "logged_in": False,
+            "diagnostic_code": "gh_not_installed",
+            "retry_required": "none",
+        }
 
-    rc, out, err = run(["gh", "auth", "status", "--hostname", "github.com"])
-    status = {
-        "installed": True,
-        "path": gh_path,
-        "logged_in": rc == 0,
-        "auth_status_stdout": out,
-        "auth_status_stderr": err,
-    }
-    if rc != 0:
-        return status
+    status = classify_github_auth(
+        network_context=network_context,
+        gh_path=gh_path,
+    )
 
-    rc2, login, _ = run(["gh", "api", "user", "--jq", ".login"])
-    if rc2 == 0 and login:
-        status["user_login"] = login
-
-    rc3, protocol, _ = run(["gh", "config", "get", "git_protocol", "--host", "github.com"])
+    rc3, protocol, _ = run([gh_path, "config", "get", "git_protocol", "--host", "github.com"])
     if rc3 == 0 and protocol:
         status["git_protocol"] = protocol
 
@@ -532,6 +531,12 @@ def compact_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         "gh": {
             "installed": gh.get("installed"),
             "logged_in": gh.get("logged_in"),
+            "auth_state": gh.get("auth_state"),
+            "network_state": gh.get("network_state"),
+            "network_context": gh.get("network_context"),
+            "diagnostic_code": gh.get("diagnostic_code"),
+            "retry_required": gh.get("retry_required"),
+            "knowledge_id": gh.get("knowledge_id"),
             "user_login": gh.get("user_login"),
             "git_protocol": gh.get("git_protocol"),
         },
@@ -583,6 +588,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="print a compact summary instead of the full raw payload",
     )
+    parser.add_argument(
+        "--network-context",
+        choices=NETWORK_CONTEXTS,
+        default="unknown",
+        help="declare whether this execution context has outbound network access",
+    )
     return parser.parse_args()
 
 
@@ -591,7 +602,7 @@ def main() -> None:
     ensure_workspace_identity()
     platform_info = detect_platform()
     root = git_root()
-    gh_state = gh_login()
+    gh_state = gh_login(args.network_context)
     user_login = gh_state.get("user_login")
 
     payload: Dict[str, Any] = {

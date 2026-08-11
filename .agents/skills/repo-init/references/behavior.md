@@ -96,7 +96,16 @@ For narrow Git-only tasks, skip this stage.
 
 - Prefer official install paths when privilege exists.
 - Use the bundled fallback installers when privilege does not exist.
-- Verify auth with `gh auth status` and `gh api user --jq .login`.
+- Classify auth with both `gh auth status` and `gh api user --jq .login`.
+- Keep `auth_state` (`authenticated`, `auth_failed`, `unverified`) separate
+  from `network_state` (`reachable`, `unavailable`, `unknown`).
+- A successful `gh api user` proves authentication even if the preceding
+  `gh auth status` command failed.
+- Restricted, timed-out, DNS, TLS, or otherwise transport-failed checks remain
+  `unverified` and request a network-enabled retry; they never request login.
+- Confirm `auth_failed` only from an explicitly network-enabled check with an
+  authentication-rejection fingerprint such as HTTP 401 or bad credentials.
+- Never print or persist token values or raw authentication stderr.
 - Prefer SSH for Git operations when feasible.
 
 ### Stage 5: submodules

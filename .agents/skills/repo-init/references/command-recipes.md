@@ -7,14 +7,26 @@ Prefer the helper scripts in `scripts/` and `.agents/scripts/` when possible.
 macOS / Linux / WSL:
 
 ```bash
-python3 .agents/skills/repo-init/scripts/repo_init_probe.py --compact
+python3 .agents/skills/repo-init/scripts/repo_init_probe.py \
+  --compact --network-context unknown
 ```
 
 Windows:
 
 ```powershell
-py -3 .agents/skills/repo-init/scripts/repo_init_probe.py --compact
+py -3 .agents/skills/repo-init/scripts/repo_init_probe.py `
+  --compact --network-context unknown
 ```
+
+If the probe reports `auth_state: unverified`, rerun only the read-only auth
+check from a network-enabled execution context:
+
+```bash
+python3 .agents/scripts/github_auth_probe.py --network-context enabled
+```
+
+Do not ask the user to log in again unless that second result is
+`auth_state: auth_failed`.
 
 ## Broad-init machine profile
 
