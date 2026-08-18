@@ -12,7 +12,7 @@ import shlex
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Sequence
 
 SCHEMA_VERSION = 1
 SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
@@ -90,6 +90,7 @@ def render_model_config(
     max_out_len: int,
     batch_size: int,
     temperature: float,
+    top_p: float = 1.0,
     seed: int,
 ) -> str:
     return f'''from ais_bench.benchmark.models import VLLMCustomAPIChat
@@ -115,6 +116,7 @@ models = [
         trust_remote_code=False,
         generation_kwargs=dict(
             temperature={temperature!r},
+            top_p={top_p!r},
             seed={seed},
             ignore_eos=False,
         ),
@@ -139,6 +141,7 @@ def prepare(
     max_out_len: int,
     batch_size: int,
     temperature: float,
+    top_p: float = 1.0,
     seed: int,
     num_prompts: int | None,
 ) -> dict[str, Any]:
@@ -158,6 +161,8 @@ def prepare(
         raise AisbenchAdapterError("regression thresholds must be non-negative")
     if temperature != 0:
         raise AisbenchAdapterError("temperature must be 0 for deterministic accuracy runs")
+    if not 0 < top_p <= 1:
+        raise AisbenchAdapterError("top-p must be in the interval (0, 1]")
 
     model_config = output_dir / "configs" / "models" / f"{MODEL_TASK}.py"
     _atomic_write(
@@ -169,6 +174,7 @@ def prepare(
             max_out_len=max_out_len,
             batch_size=batch_size,
             temperature=temperature,
+            top_p=top_p,
             seed=seed,
         ),
     )
@@ -321,8 +327,14 @@ def build_parser() -> argparse.ArgumentParser:
     prepare_parser.add_argument("--max-absolute-regression", type=float, default=0.0)
     prepare_parser.add_argument("--max-relative-regression", type=float, default=0.0)
     prepare_parser.add_argument("--max-out-len", type=int, default=512)
-    prepare_parser.add_argument("--batch-size", type=int, default=1)
+    prepare_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=64,
+        help="request concurrency (default: 64; intentionally non-trivial for accuracy)",
+    )
     prepare_parser.add_argument("--temperature", type=float, default=0.0)
+    prepare_parser.add_argument("--top-p", type=float, default=1.0)
     prepare_parser.add_argument("--seed", type=int, default=1)
     prepare_parser.add_argument("--num-prompts", type=int)
 
@@ -353,6 +365,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_out_len=args.max_out_len,
                 batch_size=args.batch_size,
                 temperature=args.temperature,
+                top_p=args.top_p,
                 seed=args.seed,
                 num_prompts=args.num_prompts,
             )

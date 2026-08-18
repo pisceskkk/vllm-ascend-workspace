@@ -4,6 +4,31 @@
 
 Use AISBench as a task-metric backend inside correctness validation. Do not make AISBench the source of run identity, environment truth, or pass/fail policy.
 
+For the normal managed-remote path, prefer `scripts/aisbench_run.py`. It owns
+service startup, warmup, repeated runs, artifact pull, normalization, cleanup,
+and Run Manifest v1. Use the lower-level adapter commands below when importing
+an existing AISBench run or preparing configuration without executing it.
+
+## One-click managed run
+
+```bash
+python3 .agents/skills/vllm-ascend-correctness-validation/scripts/aisbench_run.py \
+  --session-id accuracy-a \
+  --model /home/weights/Model \
+  --tp 4 \
+  --template gsm8k-cot
+```
+
+The template defaults to three measured rounds after a 16-prompt warmup.
+Accuracy concurrency defaults to 64 (128 for MMLU-Pro). Values below 16 are
+rejected unless `--allow-low-concurrency` is explicit, because a serial or very
+small request stream can hide scheduler, DP, and service-path faults.
+
+The final local run directory contains `resolved-config.json`, `manifest.json`,
+`summary.json`, the generated adapter configuration, raw AISBench work
+directories and logs, and a SHA-256 remote artifact manifest. Failed executions
+make a best-effort artifact pull before service cleanup.
+
 The adapter:
 
 - generates an isolated custom `VLLMCustomAPIChat` model config;

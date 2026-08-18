@@ -30,3 +30,13 @@
 - [ ] Run Manifest v1 validates and links every delivered artifact.
 - [ ] The report lists unsupported and untested combinations.
 - [ ] A passed run contains only exact or within-tolerance cases.
+
+## One-click AISBench accuracy
+
+- [ ] Service startup, readiness, warmup, measured rounds, cleanup, and parity are orchestrated by the managed wrappers.
+- [ ] Accuracy concurrency is at least 16 unless low concurrency was explicitly acknowledged.
+- [ ] Template provenance and the effective output length, temperature, top-p, seed, concurrency, and prompt count are frozen.
+- [ ] The warmup is separate from all measured work directories.
+- [ ] All measured summaries normalize successfully and aggregate across the requested run count.
+- [ ] Raw AISBench outputs are pulled with SHA-256 verification; failure paths make a best-effort pull.
+- [ ] Run Manifest v1 records resolved config, artifact manifest, and summary.

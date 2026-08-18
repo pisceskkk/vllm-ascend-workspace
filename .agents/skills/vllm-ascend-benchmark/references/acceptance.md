@@ -1,5 +1,18 @@
 # Benchmark Skill Acceptance Criteria
 
+## AISBench auto-tools (`aisbench_perf_run.py`)
+
+- [ ] Service is started through `serve_start.py` after parity and is stopped on success or failure.
+- [ ] A warmup workload executes before measured rounds on the same service.
+- [ ] Each measured round uses an isolated copy of `aisbench_auto_tools` and `--repeat 1`.
+- [ ] Generated `config.py` records model, endpoint, AISBench work path, output path, and optional POD endpoints without credentials.
+- [ ] Every measured `aisbench_result.csv` has one row and no required sentinel metrics.
+- [ ] All raw AISBench outputs, including HTML/CSV/log files, are pulled with a SHA-256 manifest.
+- [ ] Failure paths attempt artifact pull before cleaning up the service.
+- [ ] `summary.json` contains per-run metrics and mean/sample-standard-deviation aggregates.
+- [ ] Run Manifest v1 records the resolved config, generated config, artifact manifest, and summary.
+- [ ] Progress uses `__VAWS_AISBENCH_PERF_PROGRESS__` on stderr and final JSON alone on stdout.
+
 ## Single-run (`bench_run.py` with default `--runs 1`)
 
 - [ ] Service is started via `serve_start.py` (not raw SSH).

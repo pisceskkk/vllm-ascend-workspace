@@ -35,6 +35,9 @@ harness = load_module(
 aisbench = load_module(
     "_aisbench_adapter_test", SKILL / "scripts" / "aisbench_adapter.py"
 )
+aisbench_run = load_module(
+    "_aisbench_run_test", SKILL / "scripts" / "aisbench_run.py"
+)
 NOW = "2026-07-25T12:00:00Z"
 
 
@@ -265,6 +268,7 @@ class AisbenchAdapterTests(unittest.TestCase):
             self.assertTrue(model_config.is_file())
             text = model_config.read_text(encoding="utf-8")
             self.assertIn('api_key=""', text)
+            self.assertIn("top_p=1.0", text)
             self.assertNotIn("benchmark/ais_bench/benchmark/configs", str(model_config))
             ast.parse(text)
             self.assertEqual(payload["command"][0], "ais_bench")
@@ -273,6 +277,22 @@ class AisbenchAdapterTests(unittest.TestCase):
                 (root / "adapter" / "aisbench-cases.json").read_text(encoding="utf-8")
             )
             correctness.validate_cases_document(cases)
+
+    def test_prepare_cli_defaults_to_nontrivial_accuracy_concurrency(self) -> None:
+        parser = aisbench.build_parser()
+        args = parser.parse_args(
+            [
+                "prepare",
+                "--output-dir", "/tmp/out",
+                "--host", "127.0.0.1",
+                "--port", "8000",
+                "--served-model", "example",
+                "--dataset", "gsm8k_gen_4_shot_cot_str",
+                "--work-dir", "/tmp/work",
+            ]
+        )
+        self.assertEqual(args.batch_size, 64)
+        self.assertEqual(args.top_p, 1.0)
 
     def test_summary_csv_is_normalized(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -285,6 +305,69 @@ class AisbenchAdapterTests(unittest.TestCase):
             normalized = aisbench.normalize_summary(summary, label="baseline")
             self.assertEqual(normalized["cases"][0]["status"], "ok")
             self.assertEqual(normalized["cases"][0]["metrics"]["accuracy"], 56.7)
+
+
+class AisbenchWorkflowTests(unittest.TestCase):
+    def test_gsm8k_template_uses_nontrivial_concurrency(self) -> None:
+        args = aisbench_run.build_parser().parse_args(
+            [
+                "--machine", "host-a",
+                "--model", "/weights/model",
+                "--template", "gsm8k-cot",
+            ]
+        )
+        resolved = aisbench_run.resolve_case(args)
+        self.assertEqual(resolved["batch_size"], 64)
+        self.assertEqual(resolved["temperature"], 0.0)
+        self.assertEqual(resolved["top_p"], 1.0)
+        self.assertEqual(resolved["max_out_len"], 16384)
+        self.assertEqual(resolved["selected_output_length_profile"], "reasoning")
+
+    def test_generation_profile_selects_task_specific_output_length(self) -> None:
+        args = aisbench_run.build_parser().parse_args(
+            [
+                "--machine", "host-a",
+                "--model", "/weights/model",
+                "--template", "gpqa-diamond-cot",
+                "--generation-profile", "standard",
+            ]
+        )
+        resolved = aisbench_run.resolve_case(args)
+        self.assertEqual(resolved["max_out_len"], 8192)
+        self.assertEqual(resolved["selected_output_length_profile"], "standard")
+
+    def test_explicit_output_length_overrides_generation_profile(self) -> None:
+        args = aisbench_run.build_parser().parse_args(
+            [
+                "--machine", "host-a",
+                "--model", "/weights/model",
+                "--template", "gpqa-diamond-cot",
+                "--generation-profile", "long-reasoning",
+                "--max-out-len", "24576",
+            ]
+        )
+        resolved = aisbench_run.resolve_case(args)
+        self.assertEqual(resolved["max_out_len"], 24576)
+        self.assertEqual(resolved["selected_output_length_profile"], "explicit")
+
+    def test_low_accuracy_concurrency_requires_acknowledgement(self) -> None:
+        args = aisbench_run.build_parser().parse_args(
+            [
+                "--machine", "host-a",
+                "--model", "/weights/model",
+                "--template", "gsm8k-cot",
+                "--batch-size", "1",
+            ]
+        )
+        with self.assertRaisesRegex(ValueError, "below 16"):
+            aisbench_run.resolve_case(args)
+
+    def test_manifest_command_redacts_secret_environment_values(self) -> None:
+        command = aisbench_run.redacted_command(
+            ["runner", "--extra-env", "API_TOKEN=live-secret"]
+        )
+        self.assertEqual(command[-1], "API_TOKEN=<redacted>")
+        self.assertNotIn("live-secret", " ".join(command))
 
 
 if __name__ == "__main__":

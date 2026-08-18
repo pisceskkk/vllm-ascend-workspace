@@ -1,5 +1,40 @@
 # Benchmark Command Recipes
 
+## AISBench auto-tools (preferred)
+
+```bash
+python3 .agents/skills/vllm-ascend-benchmark/scripts/aisbench_perf_run.py \
+  --session-id perf-a \
+  --model /home/weights/Model \
+  --tp 4 \
+  --input-len 2048 \
+  --output-len 2048 \
+  --data-num 512 \
+  --concurrency 64 \
+  --runs 3
+```
+
+Prefix-cache performance with prefix warmup and DP-aware metrics:
+
+```bash
+python3 .agents/skills/vllm-ascend-benchmark/scripts/aisbench_perf_run.py \
+  --session-id perf-prefix \
+  --model /home/weights/Model \
+  --dp 2 \
+  --dataset-type prefix_cache \
+  --repeat-rate 0.5 \
+  --prefix-test \
+  --concurrency 64 \
+  --data-num 512
+```
+
+Each measured round receives an isolated copy of `aisbench_auto_tools`, so its
+single-last-result behavior cannot overwrite another round. Raw output trees,
+HTML/CSV/log files, generated config, aggregate summary, and Run Manifest v1
+are pulled and retained under `.vaws-local/benchmark/aisbench-auto-tools/`.
+
+## vLLM bench serve
+
 ## Single-run: minimal
 
 ```bash

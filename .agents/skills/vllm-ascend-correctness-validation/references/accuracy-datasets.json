@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "defaults": {
+    "batch_size": 64,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 1,
+    "runs": 3,
+    "warmup_prompts": 16
+  },
+  "templates": {
+    "gsm8k-cot": {
+      "aisbench_dataset": "gsm8k_gen_4_shot_cot_str",
+      "hf_dataset": "openai/gsm8k",
+      "hf_config": "main",
+      "hf_split": "test",
+      "hf_url": "https://huggingface.co/datasets/openai/gsm8k",
+      "metric": "accuracy",
+      "max_out_len": 16384,
+      "default_output_length_profile": "reasoning",
+      "output_length_profiles": {
+        "standard": 4096,
+        "reasoning": 16384,
+        "long-reasoning": 32768
+      },
+      "batch_size": 64,
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "num_prompts": 1319,
+      "notes": "Four-shot chain-of-thought. The reasoning default covers verbose thinking models; use standard for concise instruct models."
+    },
+    "gpqa-diamond-cot": {
+      "aisbench_dataset": "gpqa_gen_0_shot_cot_chat_prompt",
+      "hf_dataset": "Idavidrein/gpqa",
+      "hf_config": "gpqa_diamond",
+      "hf_split": "train",
+      "hf_url": "https://huggingface.co/datasets/Idavidrein/gpqa",
+      "gated": true,
+      "metric": "accuracy",
+      "max_out_len": 65536,
+      "default_output_length_profile": "reasoning",
+      "output_length_profiles": {
+        "standard": 8192,
+        "reasoning": 65536,
+        "long-reasoning": 131072
+      },
+      "batch_size": 64,
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "notes": "Zero-shot chain-of-thought; long reasoning is common on GPQA. The Hugging Face dataset requires accepting its access conditions."
+    },
+    "math500-cot": {
+      "aisbench_dataset": "math500_gen_0_shot_cot_chat_prompt",
+      "hf_dataset": "HuggingFaceH4/MATH-500",
+      "hf_config": "default",
+      "hf_split": "test",
+      "hf_url": "https://huggingface.co/datasets/HuggingFaceH4/MATH-500",
+      "metric": "accuracy",
+      "max_out_len": 32768,
+      "default_output_length_profile": "reasoning",
+      "output_length_profiles": {
+        "standard": 8192,
+        "reasoning": 32768,
+        "long-reasoning": 65536
+      },
+      "batch_size": 64,
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "num_prompts": 500,
+      "notes": "Zero-shot chain-of-thought with boxed final answer; long output allowance avoids truncating reasoning."
+    },
+    "mmlu-pro-cot": {
+      "aisbench_dataset": "mmlu_pro_gen_0_shot_str",
+      "hf_dataset": "TIGER-Lab/MMLU-Pro",
+      "hf_config": "default",
+      "hf_split": "test",
+      "hf_url": "https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro",
+      "metric": "accuracy",
+      "max_out_len": 32768,
+      "default_output_length_profile": "reasoning",
+      "output_length_profiles": {
+        "standard": 4096,
+        "reasoning": 32768,
+        "long-reasoning": 65536
+      },
+      "batch_size": 128,
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "notes": "Zero-shot reasoning over the full subject set; high concurrency is intentional for service-path coverage."
+    }
+  },
+  "parameter_provenance": {
+    "dataset_identity_and_split": "Hugging Face dataset card/repository",
+    "aisbench_dataset": "bundled AISBench dataset configuration",
+    "max_out_len": "task- and model-family-aware workspace profiles derived from official model evaluation guidance and vllm-ascend accuracy configurations; explicit command-line overrides take precedence",
+    "temperature_top_p_batch_size": "workspace operational defaults; override for model-specific chat templates or published reproduction protocols"
+  }
+}

@@ -20,7 +20,7 @@ Produce traceable correctness evidence instead of treating a successful request 
    - eager pass and graph fail: `vllm-ascend-graph-debug`;
    - multi-rank hang or inconsistent rank metadata: `vllm-ascend-distributed-debug` when available;
    - performance-only change: `vllm-ascend-performance-regression` when available;
-   - task metric execution: use the bundled AISBench adapter.
+   - task metric execution: use the bundled AISBench adapter or one-click AISBench workflow.
 
 Do not run the full execution-mode, parallelism, and feature Cartesian product. Select cases from the code impact and `.agents/knowledge/validation-rules.yaml`; record omitted combinations as risks.
 
@@ -56,12 +56,14 @@ Do not relabel infrastructure failures as correctness regressions. Do not treat 
 - `scripts/correctness_run.py`: initialize a run, compare normalized baseline and candidate outputs, write `comparison.json`, `report.md`, `reproduction.sh`, and update Run Manifest v1.
 - `scripts/remote_correctness_harness.py`: execute offline generate, offline chat, or online chat cases and write the normalized result contract.
 - `scripts/aisbench_adapter.py`: prepare an AISBench accuracy command/config and normalize task metrics into the correctness result contract.
+- `scripts/aisbench_run.py`: start a service, warm it with AISBench, execute repeated accuracy rounds, pull hash-verified artifacts, normalize summaries, and finish a Run Manifest v1.
 
 Read as needed:
 
 - [Behavior contract](references/behavior.md) for case, result, comparison, and artifact schemas.
 - [Command recipes](references/command-recipes.md) for local control-plane and remote harness examples.
 - [AISBench adapter](references/aisbench.md) before preparing or importing AISBench results.
+- [Accuracy dataset templates](references/accuracy-datasets.md) before selecting or overriding a Hugging Face-backed template.
 - [Acceptance](references/acceptance.md) before marking a run passed.
 
 ## Boundaries

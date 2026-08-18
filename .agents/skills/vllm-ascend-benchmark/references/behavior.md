@@ -12,9 +12,23 @@ keeps the existing scripts as the managed VAWS compatibility backend.
 2. **Assemble config** from user args + optional nightly reference.
 3. **Stop existing service** on the target target if any. In session mode this means only the session service.
 4. **Start service** via `serve_start.py` (which handles parity sync internally). If startup returns non-ready, call `serve_stop.py --force` for the same target before failing.
-5. **Run benchmark iterations** via SSH on the remote container — all against the same warm service.
-6. **Stop service** via `serve_stop.py`, passing through `--session-id` when used.
-7. **Output structured JSON** on stdout.
+5. **Warm the service and run benchmark iterations** through the managed remote execution substrate — all against the same service.
+6. **Pull and verify artifacts** for AISBench auto-tools runs, including failed runs when the remote directory exists.
+7. **Stop service** via `serve_stop.py`, passing through `--session-id` when used.
+8. **Output structured JSON** on stdout.
+
+## AISBench auto-tools mode
+
+`aisbench_perf_run.py` is the primary performance path. It copies
+`aisbench_auto_tools` into a separate remote directory for warmup and every
+measured round, then publishes a generated `config.py` into each copy. This
+prevents the tool's mutable config, symlinks, logs, and last-result behavior from
+overwriting another round or changing the local submodule.
+
+Every successful run freezes raw CSV/log/HTML/output data under
+`.vaws-local/benchmark/aisbench-auto-tools/<run-id>/`, writes aggregate metrics,
+and completes Run Manifest v1. The wrapper rejects missing CSVs and the tool's
+`9999`/`99999` sentinel values even when the underlying script exits zero.
 
 ## Configuration Priority
 
@@ -65,11 +79,11 @@ single-run or aggregated JSON without changing Benchmark's measurement contract.
 models whose loading time exceeds the Serving default. It changes only how long
 Benchmark waits for readiness; it does not change measured request metrics.
 
-## Remote Execution
+## vLLM bench remote execution
 
 `vllm bench serve` runs inside the container via SSH. The result JSON file is written to `/tmp/` with a target token, local process id, and random suffix in the file name, then `cat`-ed back through the SSH session. The script parses the last JSON object from stdout. The unique file name matters because session containers can share the host `/tmp` mount on the same machine.
 
-## Defaults
+## vLLM bench defaults
 
 When the user provides no bench args and no nightly reference:
 - `--num-prompts 64`
@@ -79,4 +93,8 @@ These are conservative defaults suitable for a quick smoke test. For production 
 
 ## State Management
 
-Benchmark results are not persisted locally by default. The structured JSON is returned on stdout for the agent or user to consume. The serving skill handles its own state under `.vaws-local/serving/` in legacy mode and `.vaws-local/sessions/<session-id>/serving.json` in session mode.
+`bench_run.py` persists its structured result under the benchmark state tree.
+`aisbench_perf_run.py` additionally persists resolved and generated configs,
+raw hash-verified remote artifacts, aggregate summary, and Run Manifest v1.
+The serving skill handles its own state under `.vaws-local/serving/` in legacy
+mode and `.vaws-local/sessions/<session-id>/serving.json` in session mode.

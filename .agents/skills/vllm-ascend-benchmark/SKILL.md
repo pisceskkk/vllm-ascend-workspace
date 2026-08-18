@@ -1,11 +1,14 @@
 ---
 name: vllm-ascend-benchmark
-description: Execute and normalize one code state's vLLM online-serving benchmark on a workspace-managed remote container, including repeated measurements against one warm service. Use for requests like "跑个 benchmark", "压测一下", or "测下吞吐和延迟". Do not use for baseline-versus-candidate orchestration, regression decisions, accuracy tests, nightly CI matrices, offline inference, or service-only lifecycle.
+description: Execute and normalize one code state's vLLM online-serving benchmark on a workspace-managed remote container, using aisbench_auto_tools by default or vllm bench serve when explicitly selected, including warmup, repeated measurements, and durable artifacts. Use for requests like "跑个 benchmark", "压测一下", or "测下吞吐和延迟". Do not use for baseline-versus-candidate orchestration, regression decisions, accuracy tests, nightly CI matrices, offline inference, or service-only lifecycle.
 ---
 
 # vLLM Ascend Benchmark
 
-Run `vllm bench serve` on a **ready** workspace-managed remote container and produce structured performance results. Supports single-run and multi-run (warm-service) modes.
+Run `aisbench_auto_tools` or `vllm bench serve` on a **ready** workspace-managed
+remote container and produce structured performance results. New performance
+work should use the AISBench entry point unless the user explicitly needs
+vLLM's native benchmark result contract.
 
 Remote substrate rule: use `.remote-dev` remote tools for ad hoc remote
 read/edit/bash/search/patch work around benchmark setup or result inspection.
@@ -43,7 +46,33 @@ compatibility backend for managed VAWS sessions.
 - macOS / Linux / WSL: `python3 ...`
 - Windows: `py -3 ...`
 
-## Public entry point
+## Primary public entry point: AISBench auto tools
+
+```bash
+python3 .agents/skills/vllm-ascend-benchmark/scripts/aisbench_perf_run.py \
+  (--machine <alias-or-ip> | --session-id <id>) \
+  --model <remote-weight-path> \
+  [--tp <N>] [--dp <N>] \
+  [--input-len <N>] [--output-len <N>] \
+  [--data-num <N>] [--concurrency <N>] \
+  [--warmup-requests <N>] [--runs <N>] \
+  [--request-rate <N>] [--dataset <remote-jsonl>] \
+  [--dataset-type normal|prefix_cache] \
+  [--performance-summarizer default_perf|stable_stage]
+```
+
+This entry point starts and cleans up the service, writes an isolated
+`aisbench_auto_tools/config.py`, performs one warmup phase, runs each measured
+round in a separate copied tool directory, validates that result CSVs do not
+contain the tool's sentinel values, pulls the full AISBench output tree with
+SHA-256 verification, aggregates CSV metrics, and completes Run Manifest v1.
+It also attempts artifact collection when a run fails.
+
+Defaults follow the auto-tools workload (`3500/1500`, 8192 requests,
+concurrency 2048) and use three measured rounds. Override them for the intended
+model context and NPU capacity.
+
+## Secondary public entry point: vLLM bench serve
 
 ```bash
 python3 .agents/skills/vllm-ascend-benchmark/scripts/bench_run.py \
