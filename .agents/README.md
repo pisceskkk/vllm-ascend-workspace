@@ -42,6 +42,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/ascend-operator-debug/` is the source-of-truth skill package for isolated Ascend operator reproduction and explicit input/mode reference matrices.
 - `.agents/skills/vllm-ascend-pd-serving/` is the source-of-truth scenario package for Session Group-based prefill/decode lifecycle, proxy health, rollback, and KV request smoke.
 - `.agents/skills/vllm-ascend-upstream-sync/` is the source-of-truth package for vLLM ref comparison, vllm-ascend compatibility signals, and guarded submodule checkout.
+- `.agents/skills/vllm-gpu-image-deploy/` is the source-of-truth package for deploying pinned local vLLM CUDA image tarballs plus commit-aligned Python-source overlays to NVIDIA GPU fleets with candidate validation and rollback.
 - `.agents/skills/curate-workspace-knowledge/` is the explicit-only package for reviewing and promoting verified candidates into the existing formal knowledge files.
 - `.agents/scripts/workspace_profile.py` is the shared low-level helper for the local workspace machine profile.
 - `.agents/scripts/workspace_identity.py` manages the persistent local UUID4 and optional unified project/agent/resource alias.
@@ -135,6 +136,7 @@ Current primary helpers:
 - `ascend-operator-debug/scripts/operator_debug.py`
 - `vllm-ascend-pd-serving/scripts/pd_serving.py`
 - `vllm-ascend-upstream-sync/scripts/upstream_sync.py`
+- `vllm-gpu-image-deploy/scripts/deploy_fleet.py`
 - `curate-workspace-knowledge/scripts/knowledge_curate.py`
 - `scripts/skill_catalog.py`
 - `scripts/run_manifest.py`

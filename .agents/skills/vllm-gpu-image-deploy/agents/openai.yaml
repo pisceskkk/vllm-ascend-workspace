@@ -1,0 +1,4 @@
+interface:
+  display_name: "vLLM GPU Image Deploy"
+  short_description: "Deploy source-overlaid vLLM images to GPU fleets"
+  default_prompt: "Use $vllm-gpu-image-deploy to deploy a commit-aligned local vLLM image and source overlay to NVIDIA GPU hosts while preserving image-built runtime artifacts and rollback."

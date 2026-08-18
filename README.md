@@ -51,6 +51,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 | **ascend-operator-debug** | 将模型级问题缩减为单个 Ascend 算子调用并执行 dtype/shape/layout/mode 对拍矩阵 | 已有单算子嫌疑或需构造最小算子复现时 |
 | **vllm-ascend-pd-serving** | 在 Session Group 上编排 prefill/decode 服务、connector、代理健康、回滚和 KV 请求 smoke | 需要部署 NIXL、Mooncake 等 PD 分离场景时 |
 | **vllm-ascend-upstream-sync** | 比较 vLLM old/new ref、定位 API 与 vllm-ascend 消费影响并受控更新子模块指针 | 有意升级 vLLM 子模块并评估兼容性时 |
+| **vllm-gpu-image-deploy** | 将固定的本地 vLLM CUDA 镜像和对齐提交的 Python 源码覆盖层部署到 NVIDIA GPU 服务器，并保留回滚容器 | 需要向 H20、H100、H200 等 GPU 主机部署或重建 vLLM 开发容器时 |
 | **curate-workspace-knowledge** | 审核、去重、提升、合并、拒绝或废弃已验证的项目知识候选 | 显式要求沉淀、整理或维护项目知识时 |
 
 
@@ -115,6 +116,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 │   │   ├── ascend-operator-debug/ # Ascend 单算子诊断技能
 │   │   ├── vllm-ascend-pd-serving/ # PD 分离服务编排技能
 │   │   ├── vllm-ascend-upstream-sync/ # vLLM 上游升级技能
+│   │   ├── vllm-gpu-image-deploy/ # vLLM GPU 镜像部署技能
 │   │   └── curate-workspace-knowledge/ # 显式知识整理技能
 │   ├── lib/               # 共享本地状态库
 │   └── scripts/           # 共享辅助脚本

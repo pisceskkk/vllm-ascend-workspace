@@ -51,6 +51,7 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **ascend-operator-debug** | Reduce a model symptom to one Ascend operator call and run an explicit dtype/shape/layout/mode reference matrix | When an operator is already suspected or a minimal operator reproducer is needed |
 | **vllm-ascend-pd-serving** | Orchestrate prefill/decode services, connector config, proxy health, rollback, and KV request smoke on a Session Group | When deploying PD disaggregation with NIXL, Mooncake, or another connector |
 | **vllm-ascend-upstream-sync** | Compare vLLM refs, locate API and vllm-ascend consumer impact, and guard the submodule pointer update | When intentionally upgrading the vLLM submodule and assessing compatibility |
+| **vllm-gpu-image-deploy** | Deploy a pinned local vLLM CUDA image and commit-aligned Python-source overlay to NVIDIA GPU hosts while retaining rollback | When deploying or rebuilding vLLM development containers on H20, H100, H200, or other NVIDIA GPU hosts |
 | **curate-workspace-knowledge** | Review, deduplicate, promote, merge, reject, or deprecate verified project knowledge candidates | When explicitly curating or maintaining project knowledge |
 
 
@@ -114,6 +115,7 @@ When talking to an Agent:
 │   │   ├── ascend-operator-debug/ # Isolated Ascend operator diagnosis skill
 │   │   ├── vllm-ascend-pd-serving/ # PD disaggregated serving skill
 │   │   ├── vllm-ascend-upstream-sync/ # vLLM upstream upgrade skill
+│   │   ├── vllm-gpu-image-deploy/ # vLLM GPU image deployment skill
 │   │   └── curate-workspace-knowledge/ # Explicit knowledge curation skill
 │   ├── lib/               # Shared local-state library
 │   └── scripts/           # Shared helper scripts

@@ -70,6 +70,7 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 | `ascend-triton-kernel-optimization` | Run profiler-driven, correctness-gated Ascend Triton performance experiments with keep/discard decisions |
 | `vllm-ascend-pd-serving` | Orchestrate multi-session prefill/decode services, connector config, proxy health, rollback, and smoke |
 | `vllm-ascend-upstream-sync` | Compare vLLM refs, map compatibility risk to vllm-ascend consumers, and guard submodule checkout |
+| `vllm-gpu-image-deploy` | Deploy a pinned local Docker-save vLLM CUDA image plus Python-source overlay to NVIDIA GPU hosts while preserving image-built operators and rollback state |
 | `curate-workspace-knowledge` | Explicitly review, deduplicate, promote, merge, reject, or deprecate verified knowledge candidates |
 
 None of these are gates for normal local coding, docs work, or unrelated Git tasks.
