@@ -30,6 +30,7 @@ from vaws_remote_toolbox import (  # noqa: E402
     resolve_remote_target,
 )
 from vaws_session_state import session_serving_state_path  # noqa: E402
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 from vaws_validate import parse_device_csv  # noqa: E402
 
 SERVING_STATE_DIR = ROOT / ".vaws-local" / "serving"
@@ -56,7 +57,7 @@ class ExecutionTarget:
 
 def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
     return [
-        "ssh",
+        *ssh_command_prefix(),
         "-T",
         "-n",
         "-o", "BatchMode=yes",

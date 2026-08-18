@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import stat
 import subprocess
 from pathlib import Path
 from typing import Any, Callable
+
+from vaws_ssh_control import SshControlPlaneError, resolve_ssh_control_plane
 
 
 KNOWLEDGE_ID = "machine-management-openssh-system-config-ownership"
@@ -120,20 +121,25 @@ def ssh_client_preflight(
     """Parse effective SSH configuration without opening a network connection."""
 
     destination = f"{user}@{host}"
-    ssh_path = shutil.which("ssh")
+    try:
+        control_plane = resolve_ssh_control_plane()
+    except SshControlPlaneError as exc:
+        return {
+            "target": {"host": host, "port": port, "user": user, "destination": destination},
+            "check": "ssh-config",
+            "command": ["ssh", "-G", "-p", str(port), destination],
+            "mutated": False,
+            "status": "blocked",
+            "category": "ssh_control_plane_invalid",
+            "message": str(exc),
+        }
     base: dict[str, Any] = {
         "target": {"host": host, "port": port, "user": user, "destination": destination},
         "check": "ssh-config",
-        "command": ["ssh", "-G", "-p", str(port), destination],
+        "command": [*control_plane.command_prefix, "-G", "-p", str(port), destination],
+        "ssh_control_plane": control_plane.as_dict(),
         "mutated": False,
     }
-    if not ssh_path:
-        return {
-            **base,
-            "status": "blocked",
-            "category": "ssh_client_missing",
-            "message": "local OpenSSH client was not found",
-        }
 
     execute = runner or subprocess.run
     try:

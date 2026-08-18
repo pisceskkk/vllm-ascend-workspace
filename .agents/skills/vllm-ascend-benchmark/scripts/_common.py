@@ -19,6 +19,7 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 from vaws_session_state import load_session_lookup, session_benchmark_dir  # noqa: E402
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 from vaws_validate import require_env_name  # noqa: E402
 
 SERVING_SCRIPTS = ROOT / ".agents" / "skills" / "vllm-ascend-serving" / "scripts"
@@ -525,7 +526,7 @@ def run_bench_on_remote(
     )
 
     ssh_cmd = [
-        "ssh",
+        *ssh_command_prefix(),
         "-o", "BatchMode=yes",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "LogLevel=ERROR",

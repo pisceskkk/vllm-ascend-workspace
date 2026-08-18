@@ -19,6 +19,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+ROOT = Path(__file__).resolve().parents[4]
+LIB_DIR = ROOT / '.agents' / 'lib'
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
+
 WORKSPACE_ID_PATTERN = re.compile(r'[^A-Za-z0-9._-]+')
 STATE_SUBDIR = Path('.vaws-local/remote-code-parity')
 LEGACY_STATE_DIR = Path('.vaws-local')
@@ -246,8 +253,9 @@ def quoted(script: str) -> str:
 
 
 def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
+    prefix = ssh_command_prefix()
     cmd = [
-        'ssh',
+        *prefix,
         '-T',
         '-o',
         'BatchMode=yes',
@@ -260,7 +268,7 @@ def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
         endpoint.destination(),
     ]
     if not stdin:
-        cmd.insert(1, '-n')
+        cmd.insert(len(prefix), '-n')
     return cmd
 
 

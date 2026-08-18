@@ -37,6 +37,7 @@ for _p in (str(LIB_DIR), str(MM_SCRIPTS)):
 
 import inventory as inventory_store  # noqa: E402
 from vaws_session_state import load_session_lookup, session_record_for_execution  # noqa: E402
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 
 ANALYSIS_STATE_DIR = ROOT / ".vaws-local" / "profiling-analysis" / "runs"
 PROGRESS_SENTINEL = "__VAWS_PROFILE_ANALYSIS_PROGRESS__="
@@ -265,7 +266,7 @@ def print_json(data: dict[str, Any]) -> None:
 
 def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
     return [
-        "ssh",
+        *ssh_command_prefix(),
         "-o", "BatchMode=yes",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "ServerAliveInterval=30",
@@ -392,7 +393,7 @@ def ssh_stream(
 def _ssh_pipe_cmd(endpoint: SshEndpoint, remote_cmd: str) -> list[str]:
     """SSH command that runs a remote shell snippet, suitable for tar piping."""
     return [
-        "ssh",
+        *ssh_command_prefix(),
         "-o", "BatchMode=yes",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "LogLevel=ERROR",

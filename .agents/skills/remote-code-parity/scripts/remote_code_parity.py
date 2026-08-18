@@ -32,6 +32,7 @@ from common import (
     repo_root_from,
     sanitize_repo_id,
     save_state,
+    ssh_command_prefix,
     ssh_exec,
     ssh_exec_stream,
     ssh_stream_file_to_file,
@@ -570,7 +571,7 @@ def git_ssh_environment(container: SshEndpoint) -> dict[str, str]:
     env['GIT_TERMINAL_PROMPT'] = '0'
     env['GIT_SSH_COMMAND'] = shlex.join(
         [
-            'ssh',
+            *ssh_command_prefix(),
             '-T',
             '-o',
             'BatchMode=yes',

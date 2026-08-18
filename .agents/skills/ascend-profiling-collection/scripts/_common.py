@@ -62,6 +62,7 @@ def _load_serving_common():
 
 SERVING = _load_serving_common()
 SshEndpoint = SERVING.SshEndpoint
+ssh_command_prefix = SERVING.ssh_command_prefix
 ssh_exec = SERVING.ssh_exec
 resolve_machine = SERVING.resolve_machine
 resolve_execution_target = SERVING.resolve_execution_target
@@ -169,7 +170,7 @@ def open_local_tunnel(ep, remote_port: int):
     """
     local_port = _find_free_local_port()
     cmd = [
-        "ssh",
+        *ssh_command_prefix(),
         "-o", "BatchMode=yes",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "ExitOnForwardFailure=yes",

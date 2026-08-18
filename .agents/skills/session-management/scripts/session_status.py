@@ -21,6 +21,7 @@ from vaws_session_state import (  # noqa: E402
     session_live_leases,
     session_serving_state_path,
 )
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 
 SSH_CHECK_TIMEOUT_SECONDS = 60
 
@@ -39,7 +40,7 @@ def tail_output(value: str | bytes | None, limit: int = 500) -> str:
 
 def ssh_check(host: str, port: int, user: str = "root", script: str = "true") -> dict[str, Any]:
     cmd = [
-        "ssh",
+        *ssh_command_prefix(),
         "-o",
         "BatchMode=yes",
         "-o",

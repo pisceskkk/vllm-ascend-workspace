@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shlex
 import socket
 import subprocess
@@ -32,6 +31,7 @@ from vaws_npu_coordination import (  # noqa: E402
     DEFAULT_STATE_DIR,
 )
 from vaws_local_state import ensure_workspace_identity, load_workspace_identity  # noqa: E402
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 
 PROGRESS_SENTINEL = "__VAWS_NPU_COORDINATION_PROGRESS__="
 
@@ -54,13 +54,6 @@ def emit_progress(phase: str, message: str, **extra: Any) -> None:
     payload = {"phase": phase, "message": message, **extra}
     sys.stderr.write(PROGRESS_SENTINEL + json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
     sys.stderr.flush()
-
-
-def configure_local_ssh_path() -> None:
-    shim_dir = ROOT / ".vaws-local" / "bin"
-    ssh_shim = shim_dir / "ssh"
-    if ssh_shim.exists() and os.access(ssh_shim, os.X_OK):
-        os.environ["PATH"] = f"{shim_dir}:{os.environ.get('PATH', '')}"
 
 
 def resolve_target(args: argparse.Namespace) -> tuple[str, LocalEndpoint, dict[str, Any]]:
@@ -132,7 +125,7 @@ def ssh_execute(
     timeout: float,
 ) -> subprocess.CompletedProcess[str]:
     cmd = [
-        "ssh",
+        *ssh_command_prefix(),
         "-T",
         "-n",
         "-o",
@@ -344,7 +337,6 @@ def request_from_args(args: argparse.Namespace) -> dict[str, Any]:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        configure_local_ssh_path()
         alias, endpoint, target = resolve_target(args)
         request = request_from_args(args)
         emit_progress(

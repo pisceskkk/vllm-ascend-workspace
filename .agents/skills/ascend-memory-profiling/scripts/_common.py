@@ -30,6 +30,7 @@ from vaws_session_state import (  # noqa: E402
     session_record_for_execution,
     session_serving_state_path,
 )
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 
 MEMPROF_STATE_DIR = ROOT / ".vaws-local" / "memory-profiling"
 SERVING_STATE_DIR = ROOT / ".vaws-local" / "serving"
@@ -57,7 +58,7 @@ class SshEndpoint:
 
 def _ssh_base_cmd(endpoint: SshEndpoint) -> list[str]:
     return [
-        "ssh",
+        *ssh_command_prefix(),
         "-o", "BatchMode=yes",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "LogLevel=ERROR",

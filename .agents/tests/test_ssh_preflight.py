@@ -14,6 +14,7 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 import vaws_ssh_preflight as preflight  # noqa: E402
+from vaws_ssh_control import SshControlPlane, SshControlPlaneError  # noqa: E402
 
 
 def completed(returncode: int, stderr: str = "") -> subprocess.CompletedProcess[str]:
@@ -21,9 +22,20 @@ def completed(returncode: int, stderr: str = "") -> subprocess.CompletedProcess[
 
 
 class SshPreflightTests(unittest.TestCase):
+    def native_control_plane(self):
+        return mock.patch.object(
+            preflight,
+            "resolve_ssh_control_plane",
+            return_value=SshControlPlane(
+                mode="native",
+                command_prefix=("ssh",),
+                source="test",
+            ),
+        )
+
     def test_success_is_read_only_and_ready(self) -> None:
         runner = mock.Mock(return_value=completed(0))
-        with mock.patch.object(preflight.shutil, "which", return_value="/usr/bin/ssh"):
+        with self.native_control_plane():
             result = preflight.ssh_client_preflight("host", port=46001, runner=runner)
 
         self.assertEqual(result["status"], "ready")
@@ -38,7 +50,7 @@ class SshPreflightTests(unittest.TestCase):
             )
         )
         with (
-            mock.patch.object(preflight.shutil, "which", return_value="/usr/bin/ssh"),
+            self.native_control_plane(),
             mock.patch.object(preflight, "inspect_reported_path", return_value=[{"path": "/etc/ssh"}]),
         ):
             result = preflight.ssh_client_preflight("host", runner=runner)
@@ -51,26 +63,59 @@ class SshPreflightTests(unittest.TestCase):
 
     def test_other_config_failure_is_not_misclassified_as_permissions(self) -> None:
         runner = mock.Mock(return_value=completed(255, "/etc/ssh/ssh_config line 3: Bad configuration option\n"))
-        with mock.patch.object(preflight.shutil, "which", return_value="/usr/bin/ssh"):
+        with self.native_control_plane():
             result = preflight.ssh_client_preflight("host", runner=runner)
 
         self.assertEqual(result["category"], "ssh_config_invalid")
         self.assertNotIn("knowledge_id", result)
 
-    def test_missing_client_blocks_before_network_use(self) -> None:
+    def test_invalid_control_plane_blocks_before_network_use(self) -> None:
         runner = mock.Mock()
-        with mock.patch.object(preflight.shutil, "which", return_value=None):
+        with mock.patch.object(
+            preflight,
+            "resolve_ssh_control_plane",
+            side_effect=SshControlPlaneError("wsl.exe was not found"),
+        ):
+            result = preflight.ssh_client_preflight("host", runner=runner)
+
+        self.assertEqual(result["category"], "ssh_control_plane_invalid")
+        runner.assert_not_called()
+
+    def test_missing_selected_client_is_structured(self) -> None:
+        runner = mock.Mock(side_effect=FileNotFoundError)
+        with self.native_control_plane():
             result = preflight.ssh_client_preflight("host", runner=runner)
 
         self.assertEqual(result["category"], "ssh_client_missing")
-        runner.assert_not_called()
 
     def test_timeout_is_structured(self) -> None:
         runner = mock.Mock(side_effect=subprocess.TimeoutExpired(cmd=["ssh"], timeout=1))
-        with mock.patch.object(preflight.shutil, "which", return_value="/usr/bin/ssh"):
+        with self.native_control_plane():
             result = preflight.ssh_client_preflight("host", timeout=1, runner=runner)
 
         self.assertEqual(result["category"], "ssh_config_timeout")
+
+    def test_host_wsl_control_plane_is_used_for_preflight(self) -> None:
+        runner = mock.Mock(return_value=completed(0))
+        delegated = SshControlPlane(
+            mode="host-wsl",
+            command_prefix=("wsl.exe", "-d", "Ubuntu", "-u", "developer", "--", "ssh"),
+            source="test",
+            distribution="Ubuntu",
+            user="developer",
+        )
+        with mock.patch.object(preflight, "resolve_ssh_control_plane", return_value=delegated):
+            result = preflight.ssh_client_preflight("host", port=46001, runner=runner)
+
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["ssh_control_plane"]["mode"], "host-wsl")
+        self.assertEqual(
+            runner.call_args.args[0],
+            [
+                "wsl.exe", "-d", "Ubuntu", "-u", "developer", "--", "ssh",
+                "-G", "-p", "46001", "root@host",
+            ],
+        )
 
 
 if __name__ == "__main__":

@@ -45,6 +45,7 @@ from vaws_local_state import (  # noqa: E402
     load_workspace_identity,
     utc_now_iso,
 )
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 from vaws_validate import ValidationError, parse_device_csv  # noqa: E402
 
 PROGRESS_SENTINEL = "__VAWS_SESSION_PROGRESS__="
@@ -144,7 +145,7 @@ def host_port_available(record: dict[str, Any]) -> Any:
     def check(port: int) -> bool:
         script = f"! ss -ltnH 2>/dev/null | awk '{{print $4}}' | grep -Eq '[:.]({port})$'"
         cmd = [
-            "ssh",
+            *ssh_command_prefix(),
             "-o",
             "BatchMode=yes",
             "-o",
@@ -185,7 +186,7 @@ else
 fi
 """
     cmd = [
-        "ssh",
+        *ssh_command_prefix(),
         "-o",
         "BatchMode=yes",
         "-o",

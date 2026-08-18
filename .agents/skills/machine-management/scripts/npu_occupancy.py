@@ -24,6 +24,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[4]
+LIB_DIR = ROOT / ".agents" / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
+
 PROGRESS_SENTINEL = "__VAWS_NPU_OCCUPANCY_PROGRESS__="
 
 
@@ -544,13 +551,6 @@ def workspace_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
 
-def configure_local_ssh_path(root: Path) -> None:
-    shim_dir = root / ".vaws-local" / "bin"
-    ssh_shim = shim_dir / "ssh"
-    if ssh_shim.exists() and os.access(ssh_shim, os.X_OK):
-        os.environ["PATH"] = f"{shim_dir}:{os.environ.get('PATH', '')}"
-
-
 def resolve_local_target(args: argparse.Namespace) -> tuple[str, LocalEndpoint, dict[str, Any]]:
     if args.host:
         alias = args.host
@@ -608,7 +608,7 @@ def build_remote_command(script_path: Path, *, samples: int, interval: float) ->
 
 def ssh_collect(endpoint: LocalEndpoint, remote_command: str, *, timeout: float) -> subprocess.CompletedProcess[str]:
     cmd = [
-        "ssh",
+        *ssh_command_prefix(),
         "-T",
         "-n",
         "-o",
@@ -696,8 +696,6 @@ def local_main(args: argparse.Namespace) -> int:
         raise ValueError("--samples must be >= 1")
     if args.interval < 0:
         raise ValueError("--interval must be >= 0")
-    root = workspace_root()
-    configure_local_ssh_path(root)
     alias, endpoint, target_info = resolve_local_target(args)
     timeout = args.timeout if args.timeout is not None else max(30.0, args.samples * args.interval + 30.0)
     emit_progress("resolve-target", f"probing NPU occupancy on host {endpoint.destination()}:{endpoint.port}")

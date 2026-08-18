@@ -45,6 +45,7 @@ from vaws_session_state import (  # noqa: E402
     session_record_for_execution,
     session_serving_state_path,
 )
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 from vaws_validate import (  # noqa: E402
     ValidationError,
     ensure_child_path,
@@ -378,8 +379,9 @@ def resolve_remote_target(
 
 
 def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
+    prefix = ssh_command_prefix()
     cmd = [
-        "ssh",
+        *prefix,
         "-T",
         "-o",
         "BatchMode=yes",
@@ -392,7 +394,7 @@ def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
         endpoint.destination(),
     ]
     if not stdin:
-        cmd.insert(2, "-n")
+        cmd.insert(len(prefix) + 1, "-n")
     return cmd
 
 

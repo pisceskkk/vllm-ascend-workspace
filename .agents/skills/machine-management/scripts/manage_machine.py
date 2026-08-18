@@ -31,6 +31,13 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+ROOT = pathlib.Path(__file__).resolve().parents[4]
+LIB_DIR = ROOT / ".agents" / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+from vaws_ssh_control import ssh_command_prefix  # noqa: E402
+
 
 IMAGE_REGISTRY_NJU = "quay.nju.edu.cn/ascend/vllm-ascend"
 IMAGE_REGISTRY_OFFICIAL = "quay.io/ascend/vllm-ascend"
@@ -591,7 +598,7 @@ def ssh_command(
     identity_file: pathlib.Path | None = None,
 ) -> list[str]:
     command = [
-        "ssh",
+        *ssh_command_prefix(),
         "-o",
         f"BatchMode={'yes' if batch_mode else 'no'}",
         "-o",
