@@ -41,6 +41,32 @@ permissive by default, and direct endpoints default to full remote-path
 permission (`root=/`). Pass a narrower `root` explicitly when a task requires
 path isolation.
 
+## GPU-prefixed vLLM tools
+
+NVIDIA GPU workspaces use a second, repository-level tool set under
+`.agents/scripts/`. Every entry point is prefixed with `gpu_` and operates on
+`vllm` only; do not route GPU tests through the NPU/dual-repository Skill
+scripts.
+
+| Tool | Purpose |
+|------|---------|
+| `gpu_workspace.py` | Probe a GPU host/container and create an untracked workspace target config |
+| `gpu_repo_init.py` | Inspect or initialize the vLLM repository and its remotes without touching vllm-ascend |
+| `gpu_remote_exec.py` | Execute one ad hoc command in the configured GPU container |
+| `gpu_code_parity.py` | Synchronize only local `vllm/vllm` source while preserving image runtime files |
+| `gpu_serving.py` | Start, status, log, or stop one named vLLM GPU service |
+| `gpu_benchmark.py` | Run native `vllm bench serve` in the GPU container |
+| `gpu_correctness.py` | Run or compare deterministic OpenAI API smoke evidence |
+| `gpu_change_validation.py` | Map a vLLM-only diff to GPU validation evidence |
+| `gpu_performance_regression.py` | Compare normalized GPU baseline/candidate metrics |
+| `gpu_upstream_sync.py` | Inspect or apply a guarded vLLM-only ref checkout |
+
+After `vllm-gpu-image-deploy`, run the returned
+`gpu_workspace_setup_command`. It records `tool_root=.agents/scripts`, and all
+subsequent GPU workspace operations should use the `gpu_` entry points. These
+tools may reuse generic libraries under `.agents/lib/`, but they must not
+import `vllm-ascend`, `torch_npu`, NPU leases, or scripts from an Ascend Skill.
+
 ## Skills
 
 Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with usage, entry points, and routing rules — read that before invoking.

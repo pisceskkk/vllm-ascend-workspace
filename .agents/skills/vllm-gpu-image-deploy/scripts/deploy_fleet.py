@@ -25,6 +25,8 @@ from vaws_run_manifest import (  # noqa: E402
 )
 from vaws_ssh_control import ssh_command_prefix  # noqa: E402
 
+GPU_WORKSPACE_TOOL = AGENTS_DIR / "scripts" / "gpu_workspace.py"
+
 
 def progress(phase: str, **fields: object) -> None:
     print(
@@ -267,6 +269,27 @@ def render_remote_script(args: argparse.Namespace) -> str:
     return "\n".join(lines)
 
 
+def gpu_workspace_setup_command(args: argparse.Namespace, host: str) -> list[str]:
+    command = [
+        sys.executable,
+        str(GPU_WORKSPACE_TOOL),
+        "setup",
+        "--host",
+        host,
+        "--user",
+        args.user,
+        "--port",
+        str(args.port),
+        "--container",
+        args.container,
+    ]
+    if args.identity_file:
+        command.extend(["--identity-file", str(args.identity_file.expanduser().resolve())])
+    if args.ssh_config:
+        command.extend(["--ssh-config", str(args.ssh_config.expanduser().resolve())])
+    return command
+
+
 def deploy_one(args: argparse.Namespace, host: str) -> dict[str, object]:
     started = time.monotonic()
     try:
@@ -306,7 +329,7 @@ def deploy_one(args: argparse.Namespace, host: str) -> dict[str, object]:
                 fields[key] = value
         ok = process.returncode == 0 and fields.get("status") in {"ready", "already_ready"}
         progress("deploy", host=host, status="ready" if ok else "failed")
-        return {
+        result = {
             "host": host,
             "status": fields.get("status", "failed") if ok else "failed",
             "returncode": process.returncode,
@@ -314,6 +337,11 @@ def deploy_one(args: argparse.Namespace, host: str) -> dict[str, object]:
             "stderr_tail": process.stderr[-2000:],
             "duration_seconds": round(time.monotonic() - started, 3),
         }
+        if ok:
+            workspace_command = gpu_workspace_setup_command(args, host)
+            result["gpu_workspace_setup_argv"] = workspace_command
+            result["gpu_workspace_setup_command"] = shlex.join(workspace_command)
+        return result
     except Exception as exc:  # noqa: BLE001
         progress("deploy", host=host, status="failed")
         return {"host": host, "status": "failed", "error": str(exc), "duration_seconds": round(time.monotonic() - started, 3)}
@@ -364,6 +392,8 @@ def main() -> int:
         "source_head": args.source_head,
         "python_sha256": args.python_sha256.lower(),
         "hosts": results,
+        "gpu_tool_root": str(AGENTS_DIR / "scripts"),
+        "gpu_tool_prefix": "gpu_",
         "manifest_path": str(manifest_path),
     }
     run_dir.mkdir(parents=True, exist_ok=True)

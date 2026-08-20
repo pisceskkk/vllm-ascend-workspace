@@ -116,21 +116,32 @@ def hash_file(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
-def remote_receiver(remote_path: str, expected: str) -> str:
-    final = shlex.quote(remote_path)
+def remote_prepare(remote_path: str) -> str:
     parent = shlex.quote(str(pathlib.PurePosixPath(remote_path).parent))
+    temporary = shlex.quote(remote_path + ".part")
     return "\n".join(
         [
             "set -eu",
-            f"vaws_final={final}",
-            'vaws_tmp="${vaws_final}.part.$$"',
             f"mkdir -p {parent}",
-            'trap \'rm -f "$vaws_tmp"\' EXIT HUP INT TERM',
-            'cat > "$vaws_tmp"',
-            'vaws_observed=$(sha256sum "$vaws_tmp" | cut -d " " -f1)',
+            f"rm -f -- {temporary}",
+        ]
+    )
+
+
+def remote_transfer_command(args: argparse.Namespace, host: str, remote_path: str) -> list[str]:
+    temporary = shlex.quote(remote_path + ".part")
+    return ssh_base(args, host) + [f"dd of={temporary} bs=4M status=none"]
+
+
+def remote_finalize(remote_path: str, expected: str) -> str:
+    final = shlex.quote(remote_path)
+    temporary = shlex.quote(remote_path + ".part")
+    return "\n".join(
+        [
+            "set -eu",
+            f"vaws_observed=$(sha256sum {temporary} | cut -d ' ' -f1)",
             f"test \"$vaws_observed\" = {shlex.quote(expected)}",
-            'mv -f "$vaws_tmp" "$vaws_final"',
-            "trap - EXIT HUP INT TERM",
+            f"mv -f -- {temporary} {final}",
             'printf \'%s\\n\' "$vaws_observed"',
         ]
     )
@@ -162,13 +173,24 @@ def main() -> int:
         sinks: list[Sink] = []
         handles = []
         try:
-            receiver = remote_receiver(args.remote_path, expected)
             for index, host in enumerate(hosts):
                 stderr_path = temp_dir / f"{index}.stderr"
                 stderr_handle = stderr_path.open("wb")
                 handles.append(stderr_handle)
+                prepare = subprocess.run(
+                    ssh_base(args, host) + ["sh", "-s"],
+                    input=remote_prepare(args.remote_path),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=30,
+                )
+                if prepare.returncode != 0:
+                    raise RuntimeError(
+                        f"remote transfer preparation failed for {host}: {prepare.stderr.strip()}"
+                    )
                 process = subprocess.Popen(
-                    ssh_base(args, host) + ["sh", "-c", receiver],
+                    remote_transfer_command(args, host, args.remote_path),
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
                     stderr=stderr_handle,
@@ -194,7 +216,23 @@ def main() -> int:
                         except BrokenPipeError:
                             sink.failed_early = True
                     if live == 0:
-                        raise RuntimeError("all SSH transfer sinks failed")
+                        details = []
+                        for handle in handles:
+                            handle.flush()
+                        for sink in sinks:
+                            details.append(
+                                {
+                                    "host": sink.host,
+                                    "returncode": sink.process.poll(),
+                                    "stderr_tail": sink.stderr_path.read_text(
+                                        encoding="utf-8", errors="replace"
+                                    )[-1000:],
+                                }
+                            )
+                        raise RuntimeError(
+                            "all SSH transfer sinks failed: "
+                            + json.dumps(details, ensure_ascii=False, sort_keys=True)
+                        )
                     transferred += len(chunk)
                     now = time.monotonic()
                     if now - last >= 5:
@@ -221,14 +259,28 @@ def main() -> int:
                 except subprocess.TimeoutExpired:
                     sink.process.kill()
                     sink.process.wait()
-                stdout = sink.process.stdout.read().decode("utf-8", errors="replace").strip() if sink.process.stdout else ""
+                transfer_stdout = sink.process.stdout.read().decode("utf-8", errors="replace").strip() if sink.process.stdout else ""
                 stderr = sink.stderr_path.read_text(encoding="utf-8", errors="replace").strip()
-                ok = sink.process.returncode == 0 and stdout.splitlines()[-1:] == [expected]
+                stdout = transfer_stdout
+                returncode = sink.process.returncode
+                if returncode == 0:
+                    finalize = subprocess.run(
+                        ssh_base(args, sink.host) + ["sh", "-s"],
+                        input=remote_finalize(args.remote_path, expected),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=max(60, remaining),
+                    )
+                    returncode = finalize.returncode
+                    stdout = finalize.stdout.strip()
+                    stderr = "\n".join(item for item in (stderr, finalize.stderr.strip()) if item)
+                ok = returncode == 0 and stdout.splitlines()[-1:] == [expected]
                 results.append(
                     {
                         "host": sink.host,
                         "status": "ok" if ok else "failed",
-                        "returncode": sink.process.returncode,
+                        "returncode": returncode,
                         "remote_sha256": stdout.splitlines()[-1] if stdout else None,
                         "stderr_tail": stderr[-1000:],
                     }

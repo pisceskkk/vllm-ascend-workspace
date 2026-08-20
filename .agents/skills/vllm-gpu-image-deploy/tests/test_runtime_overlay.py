@@ -73,6 +73,7 @@ def test_deploy_script_uses_no_clobber_runtime_seed_and_source_checksums() -> No
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     args = argparse.Namespace(
         remote_image_tar="/tmp/image.tar",
@@ -159,3 +160,53 @@ def test_deploy_ssh_config_override_is_used() -> None:
     )
     command = module.ssh_base(args, "192.0.2.1")
     assert command[command.index("-F") + 1] == "/dev/null"
+
+
+def test_gpu_workspace_entrypoint_is_repository_level_gpu_tool() -> None:
+    spec = importlib.util.spec_from_file_location(
+        "gpu_deploy_workspace_entrypoint", SCRIPTS / "deploy_fleet.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.GPU_WORKSPACE_TOOL.name == "gpu_workspace.py"
+    assert module.GPU_WORKSPACE_TOOL.parent.name == "scripts"
+    assert module.GPU_WORKSPACE_TOOL.parent.parent.name == ".agents"
+    args = argparse.Namespace(
+        user="gpu-user",
+        port=2202,
+        container="managed-vllm-gpu",
+        identity_file=None,
+        ssh_config=pathlib.Path("/dev/null"),
+    )
+    command = module.gpu_workspace_setup_command(args, "192.0.2.8")
+    assert command[1].endswith("/.agents/scripts/gpu_workspace.py")
+    assert command[command.index("--host") + 1] == "192.0.2.8"
+    assert command[command.index("--container") + 1] == "managed-vllm-gpu"
+    assert command[command.index("--ssh-config") + 1] == "/dev/null"
+
+
+def test_fleet_stream_separates_binary_transfer_from_finalize_script() -> None:
+    spec = importlib.util.spec_from_file_location(
+        "gpu_fleet_stream_quoting", SCRIPTS / "fleet_stream.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    module.ssh_command_prefix = lambda: ["ssh"]
+    args = argparse.Namespace(
+        identity_file=None,
+        ssh_config=pathlib.Path("/dev/null"),
+        port=22,
+        user="root",
+    )
+    prepare = module.remote_prepare("/tmp/image.tar")
+    command = module.remote_transfer_command(args, "192.0.2.8", "/tmp/image.tar")
+    finalize = module.remote_finalize("/tmp/image.tar", "a" * 64)
+    subprocess.run(["sh", "-n"], input=prepare, text=True, check=True)
+    subprocess.run(["sh", "-n"], input=finalize, text=True, check=True)
+    assert command[-1] == "dd of=/tmp/image.tar.part bs=4M status=none"
+    assert "mkdir -p /tmp" in prepare
+    assert "sha256sum /tmp/image.tar.part" in finalize
+    assert "mv -f -- /tmp/image.tar.part /tmp/image.tar" in finalize

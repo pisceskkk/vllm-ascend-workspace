@@ -57,6 +57,28 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 
 所有技能都是**可选的**。你可以只用其中的一部分，也可以完全不用。
 
+### vLLM/GPU 专用工具
+
+NVIDIA GPU 流程不再复用 NPU/双仓脚本，而是在同一仓库的
+`.agents/scripts/` 下提供第二套 `gpu_` 前缀入口：
+
+| 工具 | 用途 |
+|---|---|
+| `gpu_workspace.py` | 探测 GPU 主机/容器并生成未跟踪的 workspace 配置 |
+| `gpu_repo_init.py` | 仅初始化 vLLM 子模块和远程仓库拓扑 |
+| `gpu_remote_exec.py` | 在指定 GPU 容器中执行临时命令 |
+| `gpu_code_parity.py` | 仅同步 `vllm/vllm`，保留镜像内编译产物 |
+| `gpu_serving.py` | 管理命名的 vLLM GPU 服务 |
+| `gpu_benchmark.py` | 执行原生 `vllm bench serve` |
+| `gpu_correctness.py` | 执行或比较确定性的 OpenAI API smoke |
+| `gpu_change_validation.py` | 将 vLLM-only diff 映射为 GPU 验证计划 |
+| `gpu_performance_regression.py` | 比较 GPU baseline/candidate 指标 |
+| `gpu_upstream_sync.py` | 检查或受控切换 vLLM 上游 ref |
+
+`vllm-gpu-image-deploy` 的结果会为每台主机返回可直接执行的
+`gpu_workspace_setup_command`；执行后，GPU workspace 的 `tool_root` 明确指向
+本仓库 `.agents/scripts/`，后续操作不经过 Ascend Skill。
+
 ## 使用示例
 
 与 Agent 对话时，可以这样说：
@@ -119,7 +141,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 │   │   ├── vllm-gpu-image-deploy/ # vLLM GPU 镜像部署技能
 │   │   └── curate-workspace-knowledge/ # 显式知识整理技能
 │   ├── lib/               # 共享本地状态库
-│   └── scripts/           # 共享辅助脚本
+│   └── scripts/           # 共享辅助脚本，以及独立的 gpu_* vLLM/GPU 工具
 ├── .cursor/rules/         # Cursor IDE 专用规则
 ├── .trae/                 # TRAE IDE 专用规则与技能
 ├── AGENTS.md              # 跨工具 Agent 指令（AI Agent 读这个）

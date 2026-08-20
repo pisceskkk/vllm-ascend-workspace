@@ -57,6 +57,28 @@ The Agent will detect your environment, install required tools, and configure Gi
 
 All skills are **optional**. Use any subset, or none at all.
 
+### vLLM/GPU-only tools
+
+NVIDIA GPU workflows use a second set of repository-level `gpu_` entry points
+under `.agents/scripts/` instead of reusing the NPU/dual-repository scripts:
+
+| Tool | Purpose |
+|---|---|
+| `gpu_workspace.py` | Probe a GPU host/container and write an untracked workspace config |
+| `gpu_repo_init.py` | Initialize only the vLLM submodule and remote topology |
+| `gpu_remote_exec.py` | Execute an ad hoc command in the configured GPU container |
+| `gpu_code_parity.py` | Sync only `vllm/vllm` while retaining image-built runtime files |
+| `gpu_serving.py` | Manage one named vLLM GPU service |
+| `gpu_benchmark.py` | Run native `vllm bench serve` |
+| `gpu_correctness.py` | Run or compare deterministic OpenAI API smoke evidence |
+| `gpu_change_validation.py` | Map a vLLM-only diff to a GPU validation plan |
+| `gpu_performance_regression.py` | Compare GPU baseline/candidate metrics |
+| `gpu_upstream_sync.py` | Inspect or guard a vLLM-only upstream ref checkout |
+
+`vllm-gpu-image-deploy` returns an executable `gpu_workspace_setup_command`
+for each host. Its generated config points `tool_root` to this repository's
+`.agents/scripts/`, so later GPU operations do not pass through an Ascend Skill.
+
 ## Usage examples
 
 When talking to an Agent:
@@ -118,7 +140,7 @@ When talking to an Agent:
 │   │   ├── vllm-gpu-image-deploy/ # vLLM GPU image deployment skill
 │   │   └── curate-workspace-knowledge/ # Explicit knowledge curation skill
 │   ├── lib/               # Shared local-state library
-│   └── scripts/           # Shared helper scripts
+│   └── scripts/           # Shared helpers plus isolated gpu_* vLLM/GPU tools
 ├── .cursor/rules/         # Cursor IDE specific rules
 ├── .trae/                 # TRAE IDE specific rules and skills
 ├── AGENTS.md              # Cross-tool Agent instructions (Agents read this)

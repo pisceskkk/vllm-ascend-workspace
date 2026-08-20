@@ -99,6 +99,12 @@ Deploy immutable local image content to a small NVIDIA GPU fleet without pulling
    - at least one NVIDIA GPU visible, with expected count and exact model enforced when configured
    - model root visible and mounted read-only
 
+7. Initialize the host as a GPU-only test workspace with the exact
+   `gpu_workspace_setup_command` returned for that host. The command points to
+   the repository-level `.agents/scripts/gpu_workspace.py`; all later GPU
+   operations use the sibling `gpu_*.py` tools instead of the NPU/dual-repo
+   Skill scripts.
+
 Read [references/acceptance.md](references/acceptance.md) when diagnosing a failed candidate or reviewing rollback state.
 
 ## Idempotency and recovery
@@ -112,3 +118,8 @@ Read [references/acceptance.md](references/acceptance.md) when diagnosing a fail
 ## Outputs
 
 Keep local run records under `.vaws-local/vllm-gpu-image-deploy/`. Report the Docker-save source image ID, per-host runtime image ID, rootfs/build identity, source head/hash, container ID, observed GPU count/models, runtime-seed file count, shared-library count, rollback container name, and validation status.
+
+Also report the generated `gpu_workspace_setup_command`. Running it creates an
+untracked `.vaws-local/gpu-workspaces/*.json` target file whose `tool_root` is
+this repository's `.agents/scripts/` and whose entries all use the `gpu_`
+prefix.

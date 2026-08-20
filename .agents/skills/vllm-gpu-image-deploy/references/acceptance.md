@@ -17,6 +17,7 @@ Record for each host:
 - import-smoke result
 - conditional vendored DeepGEMM loader and required-API result
 - model-root mount source, destination, and read-only state
+- repository-level `gpu_workspace_setup_command` and resulting untracked GPU workspace config
 
 ## Candidate failure
 
