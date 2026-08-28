@@ -94,6 +94,63 @@ class SessionVisibilityTests(unittest.TestCase):
         self.assertEqual(result["status"], "needs_repair")
         self.assertFalse(result["device_visibility"]["matches"])
 
+    def test_visibility_probe_sends_one_remote_command(self) -> None:
+        ready = {"ok": True, "returncode": 0, "stdout": "ok", "stderr": ""}
+        run_local = mock.Mock(
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="0,1", stderr=""
+            )
+        )
+        with (
+            mock.patch.object(
+                session_create.machine_ops,
+                "find_public_key",
+                return_value=Path("/keys/id.pub"),
+            ),
+            mock.patch.object(
+                session_create.machine_ops,
+                "private_key_for_public_key",
+                return_value=Path("/keys/id"),
+            ),
+            mock.patch.object(
+                session_create.machine_ops,
+                "check_direct_ssh",
+                return_value=ready,
+            ),
+            mock.patch.object(session_create.machine_ops, "run_local", run_local),
+        ):
+            result = session_create.verify_session_ssh(
+                {
+                    "host": {
+                        "ip": "192.0.2.1",
+                        "user": "root",
+                        "port": 22,
+                    }
+                },
+                container_ssh_port=46001,
+                public_key_file=None,
+                visible_devices=[0, 1],
+            )
+
+        self.assertEqual(result["status"], "ready")
+        command = run_local.call_args.args[0]
+        self.assertEqual(
+            command[-1],
+            "printf '%s' \"${ASCEND_RT_VISIBLE_DEVICES-}\"",
+        )
+
+    def test_container_configuration_reads_visibility_from_docker_env(self) -> None:
+        script = session_create.machine_ops.render_bootstrap_host_script()
+
+        self.assertIn(
+            "configured_visible_devices=\"$(docker exec \"$container\" sh -c '",
+            script,
+        )
+        self.assertIn(
+            '"$namespace" "$configured_visible_devices"',
+            script,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

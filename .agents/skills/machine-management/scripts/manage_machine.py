@@ -1874,7 +1874,8 @@ INNER_PKG
 }
 
 configure_container_state() {
-  docker exec -i "$container" bash -s -- "$port" "$pubkey" "$machine_type" "$container_type" "$soc" "$selected_image" "$workdir" "$namespace" "$visible_devices" <<'INNER_CFG'
+  configured_visible_devices="$(docker exec "$container" sh -c 'printf "%s" "${ASCEND_RT_VISIBLE_DEVICES-}"' 2>/dev/null || true)"
+  docker exec -i "$container" bash -s -- "$port" "$pubkey" "$machine_type" "$container_type" "$soc" "$selected_image" "$workdir" "$namespace" "$configured_visible_devices" <<'INNER_CFG'
 set -euo pipefail
 port="$1"
 pubkey="$2"

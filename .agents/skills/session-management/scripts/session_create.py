@@ -246,13 +246,14 @@ def verify_session_ssh(
     }
     if container_check.get("ok") and expected_visibility:
         try:
+            visibility_script = "printf '%s' \"${ASCEND_RT_VISIBLE_DEVICES-}\""
             result = machine_ops.run_local(
                 machine_ops.ssh_command(
                     container,
                     batch_mode=True,
                     identity_file=identity_file,
                 )
-                + ["sh", "-c", "printf '%s' \"${ASCEND_RT_VISIBLE_DEVICES-}\""]
+                + [visibility_script]
             )
             observed = result.stdout.strip()
             visibility_check.update(
