@@ -25,6 +25,7 @@ from vaws_jiguang import (  # noqa: E402
     record_runtime,
     workspace_gate,
 )
+from jiguang_device_key import resolve_key_material  # noqa: E402
 
 DEFAULT_STATE = ROOT / ".vaws-local" / "jiguang" / "runtimes.json"
 
@@ -102,6 +103,7 @@ def ensure(args: argparse.Namespace) -> dict[str, Any]:
     machine_record = workflow.find_record(args.machine)
     if machine_record is None:
         return {"outcome": "blocked", "error": "machine is not managed by this workspace"}
+    key_material = resolve_key_material(args.private_key_file)
     plan = plan_runtime(
         machine=args.machine,
         image_digest=args.image,
@@ -111,9 +113,20 @@ def ensure(args: argparse.Namespace) -> dict[str, Any]:
         force_clean=args.force_clean,
     )
     if plan["decision"] == "reuse":
-        return {**plan, "outcome": "ready", "changed": False}
+        return {
+            **plan,
+            "outcome": "ready",
+            "changed": False,
+            "ssh_key_fingerprint": key_material.fingerprint,
+        }
     if not args.confirm:
-        return {**plan, "outcome": "planned", "changed": False, "requires_confirm": True}
+        return {
+            **plan,
+            "outcome": "planned",
+            "changed": False,
+            "requires_confirm": True,
+            "ssh_key_fingerprint": key_material.fingerprint,
+        }
 
     target = host_target(machine_record)
     probe = workflow.probe_host(
@@ -139,6 +152,7 @@ def ensure(args: argparse.Namespace) -> dict[str, Any]:
         replace_container_on_image_change=True,
         use_prepared_image_cache=True,
         visible_devices=None,
+        public_key_file=str(key_material.public_key),
     )
     if bootstrap.get("status") in {"blocked", "needs_input", "needs_repair"} or bootstrap.get("success") is False:
         return {"outcome": "blocked", "error": "candidate runtime bootstrap failed", "bootstrap": bootstrap}
@@ -165,6 +179,7 @@ def ensure(args: argparse.Namespace) -> dict[str, Any]:
         "runtime_hash": plan["runtime_hash"],
         "native_code_hash": plan["native_code_hash"],
         "health": "ready",
+        "ssh_key_fingerprint": key_material.fingerprint,
         "previous": {
             "container_name": previous_name,
             "container_ssh_port": current_record.get("container_ssh_port"),
@@ -232,6 +247,7 @@ def parser() -> argparse.ArgumentParser:
     ensure_parser.add_argument("--image", required=True)
     ensure_parser.add_argument("--runtime-components-json", type=object_json, default={})
     ensure_parser.add_argument("--force-clean", action="store_true")
+    ensure_parser.add_argument("--private-key-file", required=True)
     ensure_parser.add_argument("--confirm", action="store_true")
     rollback_parser = actions.add_parser("rollback")
     rollback_parser.add_argument("--machine", required=True)
