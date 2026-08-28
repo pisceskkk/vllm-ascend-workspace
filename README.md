@@ -34,6 +34,7 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 | ------------------------ | ---------------------------------------------- | ------------------ |
 | **repo-init**            | 安装 GitHub CLI、登录 GitHub、初始化子模块、配置 Fork 和远程仓库拓扑 | 首次 clone 后初始化工作区   |
 | **machine-management**   | 添加、验证、修复或移除远程昇腾 NPU 服务器及其托管容器                  | 需要配置远程 NPU 开发机时    |
+| **npu-fleet-monitor**    | 从独立项目 worktree 构建、拉起、检查或停止本地 NPU 监控页面            | 需要持续查看设备、主机和历史资源状态时 |
 | **session-management**   | 创建/检查/清理隔离 session：本地 worktree、远端容器、状态目录和资源 lease | 多 agent 或多任务并行远端执行时 |
 | **remote-toolbox**       | 结构化解析/探测/执行/长任务/同步/服务/产物传输/清理远端容器              | Agent 需要像使用本地工具一样操作远端 session container 时 |
 | **remote-code-parity**   | 将本地工作区的完整状态（含未提交的修改）同步到远程容器                    | 在远程机器上运行测试或服务前自动触发 |
@@ -121,6 +122,7 @@ NVIDIA GPU 流程不再复用 NPU/双仓脚本，而是在同一仓库的
 │   ├── skills/
 │   │   ├── repo-init/             # 工作区初始化技能
 │   │   ├── machine-management/    # 远程机器管理技能
+│   │   ├── npu-fleet-monitor/     # 本地 NPU 监控服务部署技能
 │   │   ├── session-management/    # 并行 Session 隔离技能
 │   │   ├── remote-toolbox/        # 远端结构化工具面
 │   │   ├── remote-code-parity/    # 代码同步技能
@@ -191,6 +193,7 @@ NVIDIA GPU 流程不再复用 NPU/双仓脚本，而是在同一仓库的
 
 - [x] **repo-init** — 工作区初始化：GitHub CLI 安装、认证、子模块、Fork 与远程仓库拓扑配置
 - [x] **machine-management** — 远程机器管理：添加、验证、修复、移除昇腾 NPU 服务器及托管容器
+- [x] **npu-fleet-monitor** — 独立 worktree 监控服务：自动构建、systemd 用户服务拉起和回环健康检查
 - [x] **remote-code-parity** — 代码同步：将本地完整工作区状态（含未提交修改）同步到远程容器
 - [x] **session-management** — 单 Session 隔离与同快照 Session Group、顺序启动和反向清理
 - [x] **vllm-ascend-serving** — 服务拉起：支持空闲 NPU 检测、空闲端口检测，一键拉起 vLLM Ascend 推理服务

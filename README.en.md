@@ -34,6 +34,7 @@ The Agent will detect your environment, install required tools, and configure Gi
 | ---------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | **repo-init**          | Install GitHub CLI, authenticate, initialize submodules, configure forks and remote topology | After first clone                                          |
 | **machine-management** | Add, verify, repair, or remove a remote Ascend NPU server and its managed container          | When setting up a remote NPU dev machine                   |
+| **npu-fleet-monitor**  | Build, start, inspect, or stop the local NPU dashboard from its standalone project worktree | When continuously monitoring fleet resources and history  |
 | **session-management** | Create, inspect, and clean isolated sessions: local worktree, remote container, state namespace, and resource leases | For parallel remote work or multiple agents |
 | **remote-toolbox**    | Structured target/probe/exec/job/sync/service/artifact/cleanup tools for remote containers | When agents need local-tool-like control of a remote session container |
 | **remote-code-parity** | Sync the full local workspace state (including uncommitted changes) to a remote container    | Triggered automatically before remote test or service runs |
@@ -120,6 +121,7 @@ When talking to an Agent:
 │   ├── skills/
 │   │   ├── repo-init/         # Workspace initialization skill
 │   │   ├── machine-management/    # Remote machine management skill
+│   │   ├── npu-fleet-monitor/     # Local NPU monitor deployment skill
 │   │   ├── session-management/    # Parallel session isolation skill
 │   │   ├── remote-toolbox/        # Structured remote toolbox
 │   │   ├── remote-code-parity/    # Code synchronization skill
@@ -188,6 +190,7 @@ This repository supports mainstream AI coding tools:
 
 - **repo-init** — Workspace initialization: GitHub CLI install, auth, submodules, fork & remote topology
 - **machine-management** — Remote machine management: add, verify, repair, remove Ascend NPU servers and managed containers
+- **npu-fleet-monitor** — Standalone-worktree monitoring service with automatic build, user-systemd startup, and loopback health checks
 - **remote-code-parity** — Code sync: push full local workspace state (including uncommitted changes) to remote containers
 - **session-management** — Isolated sessions plus same-snapshot Session Groups with ordered startup and reverse cleanup
 - **vllm-ascend-serving** — Service launch: idle NPU detection, idle port detection, one-click vLLM Ascend inference serving
