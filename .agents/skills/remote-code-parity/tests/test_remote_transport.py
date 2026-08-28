@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 import subprocess
 import sys
@@ -29,6 +30,11 @@ parity = load_module("_remote_code_parity_test", SCRIPTS / "remote_code_parity.p
 
 
 class RemoteParityTransportTests(unittest.TestCase):
+    @staticmethod
+    def decode_remote_command(command: str) -> str:
+        parts = command.split()
+        return base64.b64decode(parts[2]).decode("utf-8")
+
     def test_command_ssh_disables_tty_and_stdin(self) -> None:
         endpoint = common.SshEndpoint(host="host", port=22, user="root")
         command = common._ssh_base_cmd(endpoint, stdin=False)
@@ -308,9 +314,9 @@ class RemoteParityTransportTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         stage.assert_called_once_with(endpoint, script)
         command = execute.call_args.args[0]
-        self.assertIn("bash", command)
         self.assertIn("-n", command)
-        self.assertTrue(any("/tmp/probe.sh" in part for part in command))
+        self.assertTrue(command[-1].startswith("printf %s "))
+        self.assertIn("/tmp/probe.sh", self.decode_remote_command(command[-1]))
 
     def test_short_command_keeps_inline_noninteractive_path(self) -> None:
         endpoint = common.SshEndpoint(host="host", port=22, user="root")
@@ -321,7 +327,7 @@ class RemoteParityTransportTests(unittest.TestCase):
 
         command = execute.call_args.args[0]
         self.assertIn("-n", command)
-        self.assertIn("-c", command)
+        self.assertEqual(self.decode_remote_command(command[-1]), "true")
 
     def test_remote_script_staging_uses_length_bounded_binary_transfer(self) -> None:
         endpoint = common.SshEndpoint(host="host", port=22, user="root")

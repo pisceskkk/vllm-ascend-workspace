@@ -9,6 +9,7 @@ thin adapters around existing parity/serving/session entrypoints.
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
 import io
 import fnmatch
@@ -398,6 +399,12 @@ def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
     return cmd
 
 
+def _remote_bash_command(script: str) -> str:
+    """Render shell source without exposing metacharacters to WSL argv bridging."""
+    payload = base64.b64encode(script.encode("utf-8")).decode("ascii")
+    return f"printf %s {payload} | base64 -d | bash"
+
+
 def ssh_exec_raw(
     endpoint: SshEndpoint,
     script: str,
@@ -405,7 +412,7 @@ def ssh_exec_raw(
     timeout: float | None = None,
     check: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    cmd = [*_ssh_base_cmd(endpoint, stdin=False), "bash", "-c", shlex.quote(script)]
+    cmd = [*_ssh_base_cmd(endpoint, stdin=False), _remote_bash_command(script)]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
     if check and result.returncode != 0:
         raise RemoteToolboxError(

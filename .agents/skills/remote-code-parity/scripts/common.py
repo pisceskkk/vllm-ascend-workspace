@@ -272,6 +272,12 @@ def _ssh_base_cmd(endpoint: SshEndpoint, *, stdin: bool = True) -> list[str]:
     return cmd
 
 
+def _remote_bash_command(script: str) -> str:
+    """Render an argv-safe SSH command without exposing shell syntax to WSL."""
+    payload = base64.b64encode(script.encode('utf-8')).decode('ascii')
+    return f'printf %s {payload} | base64 -d | bash'
+
+
 def parse_progress_event(line: str) -> dict[str, Any] | None:
     if not line.startswith(PROGRESS_SENTINEL):
         return None
@@ -296,9 +302,9 @@ def ssh_exec(
         remote_script = _stage_remote_script(endpoint, script)
         cleanup = f'rm -f {quoted(remote_script)}'
         command = f"trap {quoted(cleanup)} EXIT; bash {quoted(remote_script)}"
-        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(command)]
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), _remote_bash_command(command)]
     else:
-        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), _remote_bash_command(script)]
     return run(
         cmd,
         check=check,
@@ -318,9 +324,9 @@ def ssh_exec_stream(
         remote_script = _stage_remote_script(endpoint, script)
         cleanup = f'rm -f {quoted(remote_script)}'
         command = f"trap {quoted(cleanup)} EXIT; bash {quoted(remote_script)}"
-        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(command)]
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), _remote_bash_command(command)]
     else:
-        cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
+        cmd = [*_ssh_base_cmd(endpoint, stdin=False), _remote_bash_command(script)]
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -545,7 +551,7 @@ def _ssh_exec_inline(
 ) -> subprocess.CompletedProcess[str]:
     if len(script.encode('utf-8')) > DEFAULT_INLINE_SSH_SCRIPT_LIMIT_BYTES:
         raise ValueError('inline SSH script exceeds the safe command limit')
-    cmd = [*_ssh_base_cmd(endpoint, stdin=False), 'bash', '-c', shlex.quote(script)]
+    cmd = [*_ssh_base_cmd(endpoint, stdin=False), _remote_bash_command(script)]
     return run(cmd, check=check)
 
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -50,9 +49,7 @@ def ssh_check(host: str, port: int, user: str = "root", script: str = "true") ->
         "-p",
         str(port),
         f"{user}@{host}",
-        "bash",
-        "-c",
-        shlex.quote(script),
+        script,
     ]
     try:
         result = subprocess.run(
