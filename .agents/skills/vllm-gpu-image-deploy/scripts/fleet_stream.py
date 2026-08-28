@@ -19,6 +19,7 @@ if str(AGENTS_DIR / "lib") not in sys.path:
     sys.path.insert(0, str(AGENTS_DIR / "lib"))
 
 from vaws_ssh_control import ssh_command_prefix  # noqa: E402
+from vaws_ssh_preflight import ssh_client_preflight  # noqa: E402
 
 CHUNK_SIZE = 4 * 1024 * 1024
 
@@ -47,7 +48,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--user", default="root")
     parser.add_argument("--port", type=int, default=22)
     parser.add_argument("--identity-file", type=pathlib.Path)
-    parser.add_argument("--ssh-config", type=pathlib.Path, help="explicit OpenSSH config, e.g. /dev/null")
+    parser.add_argument("--ssh-config", type=pathlib.Path, help="explicit trusted OpenSSH config")
     parser.add_argument("--remote-path", required=True)
     parser.add_argument("--sha256", help="reuse an already computed local SHA256")
     parser.add_argument("--timeout-seconds", type=int, default=7200)
@@ -76,18 +77,19 @@ def ssh_base(args: argparse.Namespace, host: str) -> list[str]:
 
 
 def preflight(args: argparse.Namespace, host: str) -> None:
-    prefix = ssh_command_prefix()
-    config = subprocess.run(
-        prefix
-        + (["-F", str(args.ssh_config.expanduser().resolve())] if args.ssh_config else [])
-        + ["-G", "-p", str(args.port), f"{args.user}@{host}"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
+    config = ssh_client_preflight(
+        host,
+        port=args.port,
+        user=args.user,
+        ssh_config=args.ssh_config,
         timeout=20,
     )
-    if config.returncode != 0:
-        raise RuntimeError(f"ssh -G failed for {host}: {config.stderr.strip()}")
+    if config.get("status") != "ready":
+        raise RuntimeError(
+            f"SSH preflight failed for {host} "
+            f"({config.get('category', 'ssh_config_invalid')}): "
+            f"{config.get('message', 'OpenSSH configuration could not be parsed')}"
+        )
     probe = subprocess.run(
         ssh_base(args, host) + ["printf", "ok"],
         stdout=subprocess.PIPE,

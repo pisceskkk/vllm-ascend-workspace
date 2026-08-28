@@ -10,7 +10,13 @@ Deploy immutable local image content to a small NVIDIA GPU fleet without pulling
 ## Critical rules
 
 - Require key-based host SSH before transfer. Never use `sshpass`, `scp`, `sftp`, `rsync`, or saved passwords.
+- Invoke `fleet_stream.py`, `deploy_fleet.py`, and other SSH-backed GPU public
+  entrypoints outside the Codex filesystem sandbox from their first call, with
+  a narrow approval for the concrete wrapper.
 - Run `ssh -G` for every host before the first network SSH attempt.
+- If a sandboxed fallback reports `ssh_host_execution_required`, rerun the same
+  public GPU workflow outside the sandbox. Never alter `/etc/ssh` or use
+  `ssh -F /dev/null` to bypass system configuration ownership checks.
 - Inspect the Docker-save tar and pin the config-derived `sha256:<image-id>`; never deploy a moving `latest` tag by itself.
 - Verify free space on both the image staging filesystem and Docker root before transfer.
 - Hash the local tar once and verify the streamed bytes on every host before renaming the remote `.part` file.
@@ -51,8 +57,9 @@ Deploy immutable local image content to a small NVIDIA GPU fleet without pulling
      --remote-path /home/user/.vaws-images/image.tar
    ```
 
-   The script emits progress on stderr and one JSON result on stdout.
-   When the system OpenSSH config is intentionally unusable, pass an explicit trusted config such as `--ssh-config /dev/null` to both transfer and deployment commands; the required `ssh -G` check uses the same config.
+   The script emits progress on stderr and one JSON result on stdout. An
+   explicit `--ssh-config` must name a reviewed configuration; do not use it to
+   bypass an invalid system configuration.
 
 4. Prepare a source tar containing the local `vllm/vllm` tree and no local shared libraries:
 

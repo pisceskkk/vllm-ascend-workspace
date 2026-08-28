@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from vaws_ssh_control import ssh_command_prefix
+from vaws_ssh_preflight import ssh_client_preflight
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GPU_STATE_ROOT = ROOT / ".vaws-local" / "gpu-workspaces"
@@ -145,19 +146,17 @@ def ssh_base(target: GpuTarget) -> list[str]:
 
 
 def ssh_config_check(target: GpuTarget) -> None:
-    command = [*ssh_command_prefix()]
-    if target.ssh_config:
-        command.extend(["-F", str(target.ssh_config)])
-    command.extend(["-G", "-p", str(target.port), f"{target.user}@{target.host}"])
-    process = subprocess.run(
-        command,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
+    result = ssh_client_preflight(
+        target.host,
+        port=target.port,
+        user=target.user,
+        ssh_config=target.ssh_config,
         timeout=20,
     )
-    if process.returncode != 0:
-        raise GpuToolError(f"ssh -G failed: {process.stderr.strip()}")
+    if result.get("status") != "ready":
+        category = result.get("category", "ssh_config_invalid")
+        message = result.get("message", "SSH client configuration preflight failed")
+        raise GpuToolError(f"SSH preflight failed ({category}): {message}")
 
 
 def remote_bash(

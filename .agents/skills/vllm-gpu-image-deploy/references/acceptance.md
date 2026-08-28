@@ -4,6 +4,9 @@
 
 Record for each host:
 
+- the shared OpenSSH preflight passed in the approved host execution plane;
+  sandbox overflow UID/GID was not treated as host permission damage
+
 - host and alias
 - Docker-save source image ID, runtime image ID, rootfs SHA256, and image-build commit
 - local and remote image-tar SHA256
