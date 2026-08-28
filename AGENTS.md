@@ -98,6 +98,9 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 | `repo-init` | Initialize workspace: `gh`, GitHub auth, submodules, fork topology |
 | `machine-management` | Add / verify / repair / remove a remote NPU machine |
 | `npu-fleet-monitor` | Deploy, start, inspect, restart, or stop the loopback-only NPU monitoring dashboard from its standalone worktree |
+| `jiguang-runtime-management` | Prepare and connect a persistent `vaws-jiguang` runtime for explicitly requested Jiguang evaluations using real host occupancy and cooperative leases |
+| `jiguang-accuracy-validation` | Submit and archive a Jiguang dataset accuracy evaluation for a clean, committed, pushed code state |
+| `jiguang-performance-benchmark` | Submit and archive a repeated Jiguang performance benchmark for a clean, committed, pushed code state |
 | `session-management` | Create / inspect / remove isolated agent sessions (local worktree + remote container + leases) |
 | `remote-toolbox` | Compatibility backend for managed VAWS target/probe/exec/job/sync/service/artifact/cleanup tools |
 | `remote-code-parity` | Sync local working tree to remote container before execution |
@@ -125,6 +128,17 @@ Repo-local skills live under `.agents/skills/`. Each has its own `SKILL.md` with
 None of these are gates for normal local coding, docs work, or unrelated Git tasks.
 For remote endpoint work, prefer `.remote-dev` tools first and use these skills
 for domain workflows.
+
+### Jiguang evaluation boundary
+
+- Invoke Jiguang only when the user explicitly requests Jiguang or 极光 for the current task. Generic correctness and benchmark requests stay on the complete local workflow.
+- Operate only on resource pools, devices, container connections, and evaluations owned by the authenticated account. Do not expose or invoke administrator or cross-user capabilities.
+- Require the workspace and both submodules to be clean, committed, and pushed before any Jiguang deployment or evaluation submission. Never use `remote-code-parity` to send uncommitted code to Jiguang.
+- Treat platform availability as discovery data. Probe real host NPU/process/container occupancy and use the cooperative host-local coordinator before launch; Jiguang does not reserve or release NPUs.
+- Create, validate, replace, roll back, and garbage-collect `vaws-jiguang` with workspace remote/container tooling. Jiguang only registers or connects an already-created container.
+- Reuse one persistent `vaws-jiguang` per physical machine for Python-only changes. Replace it through a validated `vaws-jiguang-next` generation for image/runtime/native-code changes, drift, or an explicit clean environment request.
+- Keep each Run isolated by directory, process, service port, logs, configuration, and archive identity. Do not debug interactively inside the Jiguang runtime.
+- Keep Jiguang raw evidence in its independent archive and add only a checksum-bound archive pointer to local Run Manifest v1.
 
 ## Repo-wide rules
 

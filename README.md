@@ -35,6 +35,9 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 | **repo-init**            | 安装 GitHub CLI、登录 GitHub、初始化子模块、配置 Fork 和远程仓库拓扑 | 首次 clone 后初始化工作区   |
 | **machine-management**   | 添加、验证、修复或移除远程昇腾 NPU 服务器及其托管容器                  | 需要配置远程 NPU 开发机时    |
 | **npu-fleet-monitor**    | 从独立项目 worktree 构建、拉起、检查或停止本地 NPU 监控页面            | 需要持续查看设备、主机和历史资源状态时 |
+| **jiguang-runtime-management** | 为显式极光评测准备账号自有物理机、NPU 租约和持久 `vaws-jiguang` 容器 | 用户明确要求使用极光时 |
+| **jiguang-accuracy-validation** | 在极光上提交并归档干净已推送代码状态的数据集精度评测 | 用户明确要求极光精度评测时 |
+| **jiguang-performance-benchmark** | 在极光上提交并归档带预热和重复测量的性能 Benchmark | 用户明确要求极光性能评测时 |
 | **session-management**   | 创建/检查/清理隔离 session：本地 worktree、远端容器、状态目录和资源 lease | 多 agent 或多任务并行远端执行时 |
 | **remote-toolbox**       | 结构化解析/探测/执行/长任务/同步/服务/产物传输/清理远端容器              | Agent 需要像使用本地工具一样操作远端 session container 时 |
 | **remote-code-parity**   | 将本地工作区的完整状态（含未提交的修改）同步到远程容器                    | 在远程机器上运行测试或服务前自动触发 |
@@ -44,6 +47,10 @@ Agent 会自动检测你的环境、安装所需工具、配置 Git 远程仓库
 | **ascend-memory-profiling** | 采集并分析昇腾 NPU 的 HBM 显存占用，按组件拆分并溯源 | 需要分析 vLLM 推理服务的显存占用时 |
 | **ascend-profiling-collection** | 采集 Ascend torch profiler：起服务、控制 profile 窗口、运行 workload、远端 analyse 并写 manifest | 需要采集 kernel_details/trace_view 时 |
 | **ascend-profiling-analysis** | 分析已采集的 profiler root/manifest，生成 step/layer/operator/cross-rank 诊断报告 | 需要分析 profiling 结果或生成报告时 |
+| **ascend-triton-workflow** | 编排昇腾 Triton 算子的开发、正确性验证、优化和证据汇总 | 请求覆盖两个或更多算子生命周期阶段时 |
+| **ascend-triton-operator-development** | 从 PyTorch 参考或 GPU Triton 实现首个正确的昇腾 Triton 算子 | 新算子开发或迁移时 |
+| **ascend-triton-kernel-validation** | 对显式形状、类型、布局和模式矩阵验证昇腾 Triton kernel | 首次正确性或变更后验证时 |
+| **ascend-triton-kernel-optimization** | 对正确性通过的昇腾 Triton kernel 做 profiler 驱动优化 | 仅需要 kernel 性能优化时 |
 | **vllm-ascend-graph-debug** | 通过阶段定性、控制变量和 graph/eager 中间状态对比定位图模式问题 | 需要排查图编译、捕获、重放或精度分歧时 |
 | **vllm-ascend-correctness-validation** | 统一规划和对比 baseline/candidate、eager/graph、离线/在线及任务指标正确性 | 需要做精度验证、输出对拍或判断正确性回退时 |
 | **vllm-ascend-change-validation** | 分析代码变更影响，生成最小充分验证计划并汇总下游证据和 PR 报告 | 需要验证工作区 diff、提交或 PR 时 |

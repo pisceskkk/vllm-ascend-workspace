@@ -1,0 +1,1 @@
+"""Jiguang MCP server package."""

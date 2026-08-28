@@ -1,0 +1,11 @@
+interface:
+  display_name: "Jiguang Performance Benchmark"
+  short_description: "Run archived performance benchmarks on Jiguang"
+  default_prompt: "Use $jiguang-performance-benchmark to benchmark this committed branch on Jiguang."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "jiguang"
+      description: "Account-owned Jiguang evaluations and archives"
+policy:
+  allow_implicit_invocation: true

@@ -26,6 +26,9 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/repo-init/` is the source-of-truth skill package for repository initialization.
 - `.agents/skills/machine-management/` is the source-of-truth skill package for remote machine attach, verify, repair, and removal workflows.
 - `.agents/skills/npu-fleet-monitor/` is the local deployment and lifecycle package for the standalone NPU fleet monitoring worktree and user service.
+- `.agents/skills/jiguang-runtime-management/` is the source-of-truth package for account-owned Jiguang machine selection, real NPU occupancy, cooperative leases, dedicated runtime generations, and existing-container connections.
+- `.agents/skills/jiguang-accuracy-validation/` is the explicit-opt-in package for Jiguang dataset accuracy submissions, archives, and local Manifest links.
+- `.agents/skills/jiguang-performance-benchmark/` is the explicit-opt-in package for Jiguang repeated performance submissions, archives, and local Manifest links.
 - `.agents/skills/session-management/` is the source-of-truth skill package for isolated parallel agent sessions.
 - `.agents/skills/remote-toolbox/` is the compatibility skill package for managed VAWS target/probe/exec/job/sync/service/artifact/cleanup tools.
 - `.agents/skills/remote-code-parity/` is the source-of-truth skill package for remote code parity before remote execution.
@@ -35,6 +38,10 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/ascend-memory-profiling/` is the source-of-truth skill package for profiling and attributing HBM memory usage on Ascend NPU for vLLM serving scenarios.
 - `.agents/skills/ascend-profiling-collection/` is the source-of-truth skill package for collecting Ascend torch-profiler traces and verified manifests.
 - `.agents/skills/ascend-profiling-analysis/` is the source-of-truth skill package for analyzing collected profiler roots/manifests and generating reports.
+- `.agents/skills/ascend-triton-workflow/` is the source-of-truth orchestrator for multi-stage Ascend Triton delivery.
+- `.agents/skills/ascend-triton-operator-development/` is the source-of-truth package for first-correct Ascend Triton development and migration.
+- `.agents/skills/ascend-triton-kernel-validation/` is the source-of-truth package for explicit Ascend Triton correctness matrices.
+- `.agents/skills/ascend-triton-kernel-optimization/` is the source-of-truth package for correctness-gated Ascend Triton optimization.
 - `.agents/skills/vllm-ascend-graph-debug/` is the source-of-truth skill package for graph compile, capture, replay, and graph/eager correctness diagnosis.
 - `.agents/skills/vllm-ascend-correctness-validation/` is the source-of-truth skill package for deterministic baseline/candidate, eager/graph, offline/online, and AISBench correctness comparison.
 - `.agents/skills/vllm-ascend-change-validation/` is the source-of-truth skill package for diff impact analysis, validation planning, downstream evidence linkage, and PR reports.

@@ -1,0 +1,11 @@
+interface:
+  display_name: "Jiguang Runtime Management"
+  short_description: "Manage dedicated Jiguang evaluation runtimes"
+  default_prompt: "Use $jiguang-runtime-management to prepare an owned NPU runtime for an explicit Jiguang evaluation."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "jiguang"
+      description: "Account-owned Jiguang resources, container connections, evaluations, and archives"
+policy:
+  allow_implicit_invocation: true

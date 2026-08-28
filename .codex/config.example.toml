@@ -5,11 +5,18 @@ startup_timeout_sec = 20
 tool_timeout_sec = 600
 enabled = true
 
+[mcp_servers.jiguang]
+command = "python3"
+args = [".jiguang/mcp/server.py"]
+startup_timeout_sec = 20
+tool_timeout_sec = 600
+enabled = true
+
 [features]
 hooks = true
 
 [[hooks.PreToolUse]]
-matcher = "^Bash$|^apply_patch$|^mcp__remote-dev__.*"
+matcher = "^Bash$|^apply_patch$|^mcp__remote-dev__.*|^mcp__jiguang__.*"
 
 [[hooks.PreToolUse.hooks]]
 type = "command"

@@ -357,6 +357,67 @@
       "updated_at": "2026-07-25"
     },
     {
+      "applicable_versions": "Verified on vLLM 0.26.1rc1.dev668+g3ee2df303 and applicable to versions that register the development cache router behind VLLM_SERVER_DEV_MODE.",
+      "id": "vllm-dev-mode-reset-prefix-cache-between-benchmarks",
+      "rule": {
+        "avoidance": "Do not treat HTTP 200 alone as a successful reset: the endpoint can return `{\"success\": false}` while running requests, async offload transfers, or other block holders remain. Retry after the service becomes idle. Resetting clears cache entries; it does not itself create hits, so always re-warm the required prefix before measuring a target hit-rate workload. Do not reset running requests unless force-preemption is explicitly intended.",
+        "candidate_id": "vllm-benchmark-dev-mode-reset-prefix-cache-between-runs",
+        "candidate_ids": [
+          "vllm-benchmark-dev-mode-reset-prefix-cache-between-runs"
+        ],
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "sha256": "ba0e9be90c4fe8f42526c163d073ee5889492e4cdd8231599901d0b3aab669ce",
+            "stable": true,
+            "uri": "vllm/vllm/entrypoints/serve/dev/cache/api_router.py"
+          },
+          {
+            "kind": "source",
+            "sha256": "cd4b83e85dc9d5aae808348d336e59b3064bee697012750d23c786de082a1c53",
+            "stable": true,
+            "uri": "vllm/vllm/entrypoints/openai/api_server.py"
+          },
+          {
+            "kind": "source",
+            "sha256": "441527a14f39b7f6b8c8c4c56d985dcfbec88492e141b8392a4990b01b224d21",
+            "stable": true,
+            "uri": "vllm/vllm/benchmarks/sweep/server.py"
+          }
+        ],
+        "fingerprints": [
+          "export vllm_server_dev_mode=1",
+          "curl -x post -s http://localhost:8091/reset_prefix_cache",
+          "reset_prefix_cache success false while blocks are held"
+        ],
+        "first_seen_at": "2026-08-13T07:56:47Z",
+        "last_verified_at": "2026-08-13T07:56:47Z",
+        "occurrence_count": 1,
+        "owner_skill": "vllm-ascend-benchmark",
+        "resolution": "Before starting the server, export VLLM_SERVER_DEV_MODE=1. Once the service is idle, reset its local prefix cache with `curl -X POST -s http://localhost:8091/reset_prefix_cache` (replace 8091 with the actual serving port), parse the JSON response, and continue only when `success` is true. Then issue the intended prefix pre-warm request and begin the retained measurement. Use `?reset_external=true` only when connector-managed external cache must also be cleared.",
+        "root_cause": "The local prefix cache persists for the lifetime of the vLLM engine. The development cache-control routes are registered only when VLLM_SERVER_DEV_MODE=1 is present in the server environment at startup.",
+        "scope": {
+          "component": "prefix-cache benchmark isolation",
+          "example_endpoint": "http://localhost:8091/reset_prefix_cache",
+          "platform": "vLLM OpenAI-compatible server"
+        },
+        "summary": "Launch vLLM with VLLM_SERVER_DEV_MODE=1 and POST /reset_prefix_cache between benchmark runs to restore a controlled cold-cache state before re-warming the target prefix.",
+        "symptom": "Repeated prefix-cache benchmarks against one long-lived service inherit KV-cache entries from earlier runs, so the next run can start with an unintended hit state and produce non-comparable TTFT or throughput.",
+        "verification": {
+          "checks": [
+            "The OpenAI API server conditionally registers development routers when VLLM_SERVER_DEV_MODE is enabled.",
+            "The development cache router exposes POST /reset_prefix_cache and returns a boolean success field.",
+            "The built-in benchmark sweep server enables VLLM_SERVER_DEV_MODE=1 specifically so it can reset caches between runs."
+          ],
+          "status": "passed"
+        }
+      },
+      "source": "promoted from candidate vllm-benchmark-dev-mode-reset-prefix-cache-between-runs; stable evidence: vllm/vllm/entrypoints/serve/dev/cache/api_router.py, vllm/vllm/entrypoints/openai/api_server.py, vllm/vllm/benchmarks/sweep/server.py",
+      "status": "experimental",
+      "updated_at": "2026-08-13"
+    },
+    {
       "applicable_versions": "all vllm-ascend revisions that publish .github/vllm-main-verified.commit",
       "id": "vllm-submodule-resolve-vllm-ascend-ci-pin",
       "rule": {
@@ -445,5 +506,5 @@
   ],
   "kind": "validation-rules",
   "schema_version": 1,
-  "updated_at": "2026-08-10"
+  "updated_at": "2026-08-13"
 }

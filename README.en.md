@@ -35,6 +35,9 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **repo-init**          | Install GitHub CLI, authenticate, initialize submodules, configure forks and remote topology | After first clone                                          |
 | **machine-management** | Add, verify, repair, or remove a remote Ascend NPU server and its managed container          | When setting up a remote NPU dev machine                   |
 | **npu-fleet-monitor**  | Build, start, inspect, or stop the local NPU dashboard from its standalone project worktree | When continuously monitoring fleet resources and history  |
+| **jiguang-runtime-management** | Prepare account-owned machines, NPU leases, and a persistent `vaws-jiguang` runtime | Only when the user explicitly requests Jiguang |
+| **jiguang-accuracy-validation** | Submit and archive dataset accuracy evaluation for clean pushed code on Jiguang | When the user explicitly requests Jiguang accuracy evaluation |
+| **jiguang-performance-benchmark** | Submit and archive repeated warm performance measurements on Jiguang | When the user explicitly requests Jiguang benchmarking |
 | **session-management** | Create, inspect, and clean isolated sessions: local worktree, remote container, state namespace, and resource leases | For parallel remote work or multiple agents |
 | **remote-toolbox**    | Structured target/probe/exec/job/sync/service/artifact/cleanup tools for remote containers | When agents need local-tool-like control of a remote session container |
 | **remote-code-parity** | Sync the full local workspace state (including uncommitted changes) to a remote container    | Triggered automatically before remote test or service runs |
@@ -44,6 +47,10 @@ The Agent will detect your environment, install required tools, and configure Gi
 | **ascend-memory-profiling** | Profile and attribute HBM memory usage on Ascend NPU, with per-component breakdown and evidence chains | When you need to analyze memory consumption of a vLLM serving workload |
 | **ascend-profiling-collection** | Collect Ascend torch-profiler data: start service, bracket profile window, run workload, remote analyse, and write a manifest | When you need kernel_details/trace_view captures |
 | **ascend-profiling-analysis** | Analyze collected profiler roots/manifests and generate step/layer/operator/cross-rank reports | When you need to analyze profiling output |
+| **ascend-triton-workflow** | Orchestrate Ascend Triton development, validation, optimization, and evidence | When a request spans two or more kernel lifecycle stages |
+| **ascend-triton-operator-development** | Build the first correct Ascend Triton operator from a PyTorch reference or GPU kernel | For new kernel development or migration |
+| **ascend-triton-kernel-validation** | Validate an Ascend Triton kernel across explicit shape, dtype, layout, and mode cases | For initial or post-change correctness validation |
+| **ascend-triton-kernel-optimization** | Run profiler-driven optimization on a correctness-passed Ascend Triton kernel | When only kernel performance optimization remains |
 | **vllm-ascend-graph-debug** | Diagnose graph-mode failures through stage classification, controlled experiments, and graph/eager intermediate-state comparison | When debugging graph compile, capture, replay, or correctness divergence |
 | **vllm-ascend-correctness-validation** | Plan and compare baseline/candidate, eager/graph, offline/online, and task-metric correctness evidence | When validating accuracy, comparing outputs, or checking correctness regressions |
 | **vllm-ascend-change-validation** | Analyze code impact, plan minimum sufficient validation, and aggregate downstream evidence into a PR report | When validating a workspace diff, commit range, or PR |
