@@ -13,6 +13,8 @@ The supported current-account surface is:
 
 Use `.jiguang/host/set_jiguang_credential.ps1 -Target <name>` for short tokens or passwords. For an existing Windows-side private-key file, use `-SecretFile <path>`; Credential Manager stores only a file reference and the host bridge reads the key without returning it through MCP. Keep that file outside the repository with user-only Windows permissions.
 
+For device password authentication, prefer `.jiguang/host/prepare_jiguang_device_password.ps1 -Machine <alias> -Target <target>`. It creates a distinct random password, configures the workspace-managed container through a stdin-only secret path, and writes the same password to Windows Credential Manager. Register the device with `auth_type=PASSWORD` and that target. Never copy a password from chat or place it in a command argument.
+
 Every mutation has a separate plan or prior read and requires the boolean value `confirm=true`. Resource update/delete calls read the target first and require explicit current-account ownership evidence. Administrator, permission assignment, manager delegation, terminal, plaintext credential, arbitrary HTTP, and arbitrary script operations are absent from the tool catalog.
 
 The host transport connects directly to the internal Jiguang origin and removes inherited HTTP proxy variables for that child process. This avoids routing the internal endpoint through an external enterprise proxy and keeps proxy credentials out of platform error text.

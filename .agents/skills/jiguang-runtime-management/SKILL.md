@@ -9,6 +9,8 @@ Treat Jiguang as an account-owned resource directory, existing-container connect
 
 Before first use, store a fresh platform token in Windows Credential Manager with `.jiguang/host/set_jiguang_credential.ps1`. Store each device password or private key under a separate target and pass only that target name to `jiguang.device_registration_plan`. Never reuse credentials pasted into chat.
 
+When Jiguang requires root password authentication for an existing workspace-managed container, use `.jiguang/host/prepare_jiguang_device_password.ps1`. It generates a fresh per-device password on Windows, passes it to `scripts/jiguang_device_access.py` only through standard input, and stores it in Windows Credential Manager without returning it. Preserve the inventory-recorded high SSH port; workspace containers use host networking, so replacing it with a documentation example such as port 2222 would break the managed endpoint. Keep public-key authentication enabled for workspace recovery and verification.
+
 ## Enforce the boundary
 
 - Require explicit Jiguang opt-in for the current task; do not carry opt-in to later tasks.
@@ -26,14 +28,15 @@ Resolve exact current-account resource IDs before a mutation. Device deletion re
 
 1. Run `python3 scripts/jiguang_runtime.py gate`. Stop before runtime, container-connection, deployment, or evaluation mutation when it reports `blocked`.
 2. Read account-owned devices with `jiguang.own_devices_list` and map the chosen physical machine to the workspace inventory.
-3. Run the machine-management `npu_occupancy.py` read-only probe. Trust observed hardware and process occupancy over platform availability.
-4. Acquire a host-local cooperative lease through `scripts/jiguang_lease.py`. Run the SSH-backed wrapper outside the filesystem sandbox from its first call.
-5. Run `python3 scripts/jiguang_runtime.py plan` with an immutable image reference and recorded runtime components.
-6. Run `python3 scripts/jiguang_container.py ensure ...` outside the filesystem sandbox. Omit `--confirm` to inspect the plan; add it only after the exact machine, image, devices, and decision are accepted.
-7. Reuse `vaws-jiguang` for matching runtime/native hashes. Create `vaws-jiguang-next` through the existing machine-management bootstrap helpers for first use, runtime changes, native changes, unhealthy drift, or an explicit clean-environment request.
-8. Validate `vaws-jiguang-next`, atomically promote it, and retain the stopped old generation as `vaws-jiguang-prev-<generation>`. Never replace the working generation after a failed validation. Use `jiguang_container.py rollback` for a confirmed rollback.
-9. Register the already-created container as an account-owned device when needed, connect it with `jiguang.container_connection_plan`, then call `jiguang.container_connection_apply` only after the plan matches the intended resource.
-10. Record the ready generation with `scripts/jiguang_runtime.py record`; `jiguang_container.py ensure` records successful promotions automatically.
+3. If password authentication is required, run `scripts/jiguang_device_access.py --machine <alias>` first to inspect the plan, then invoke `.jiguang/host/prepare_jiguang_device_password.ps1` from Windows for the confirmed mutation and credential storage.
+4. Run the machine-management `npu_occupancy.py` read-only probe. Trust observed hardware and process occupancy over platform availability.
+5. Acquire a host-local cooperative lease through `scripts/jiguang_lease.py`. Run the SSH-backed wrapper outside the filesystem sandbox from its first call.
+6. Run `python3 scripts/jiguang_runtime.py plan` with an immutable image reference and recorded runtime components.
+7. Run `python3 scripts/jiguang_container.py ensure ...` outside the filesystem sandbox. Omit `--confirm` to inspect the plan; add it only after the exact machine, image, devices, and decision are accepted.
+8. Reuse `vaws-jiguang` for matching runtime/native hashes. Create `vaws-jiguang-next` through the existing machine-management bootstrap helpers for first use, runtime changes, native changes, unhealthy drift, or an explicit clean-environment request.
+9. Validate `vaws-jiguang-next`, atomically promote it, and retain the stopped old generation as `vaws-jiguang-prev-<generation>`. Never replace the working generation after a failed validation. Use `jiguang_container.py rollback` for a confirmed rollback.
+10. Register the already-created container as an account-owned device when needed, connect it with `jiguang.container_connection_plan`, then call `jiguang.container_connection_apply` only after the plan matches the intended resource.
+11. Record the ready generation with `scripts/jiguang_runtime.py record`; `jiguang_container.py ensure` records successful promotions automatically.
 
 ## Isolate each Run
 
