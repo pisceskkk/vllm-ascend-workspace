@@ -32,6 +32,12 @@ does not create another container or duplicate member leases.
 
 ## Critical Rules
 
+- Invoke SSH-backed session create/status/remove/GC/group/coordinator workflows
+  outside the Codex filesystem sandbox from their first call, using a narrow
+  approval for the concrete entrypoint. The full workflow, not only `ssh -G`,
+  must remain in the host execution plane.
+- Treat `ssh_host_execution_required` as an instruction to rerun the same
+  public wrapper outside the sandbox, never as permission to alter `/etc/ssh`.
 - Prefer `--session-id`, `VAWS_SESSION_ID`, or `VAWS_AGENT_SESSION_ID` when an upstream agent already has a stable id.
 - `session_create.py` creates a fresh generated id when no explicit/env id is provided; it does not reuse `.vaws-local/current-session.json` as a creation default.
 - Existing-session lookup commands may use `.vaws-local/current-session.json` as a convenience fallback.

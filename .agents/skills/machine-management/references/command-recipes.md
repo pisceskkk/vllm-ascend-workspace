@@ -11,7 +11,8 @@ Prefer the task-oriented wrappers. Treat the low-level helpers as fallback maint
 ## Inspect the local OpenSSH client configuration
 
 This check parses the effective target configuration without connecting or
-changing `/etc/ssh`:
+changing `/etc/ssh`. In Codex, run this entrypoint and every owning machine
+workflow in the approved host execution plane, not in the filesystem sandbox:
 
 ```bash
 python3 .agents/scripts/ssh_preflight.py 173.125.1.2 --user root --port 22
@@ -20,6 +21,8 @@ python3 .agents/scripts/ssh_preflight.py 173.125.1.2 --user root --port 22
 When it reports a system config ownership problem, resolve the reported
 symlink and inspect the path with `stat -L`. Repair requires a separate,
 explicitly approved privileged operation; do not bypass it with `ssh -F`.
+When it reports `ssh_host_execution_required`, rerun the same public workflow
+outside the sandbox instead; do not inspect or repair sandbox-mapped ownership.
 
 ## Public workflow wrappers
 

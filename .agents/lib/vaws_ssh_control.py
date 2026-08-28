@@ -89,6 +89,21 @@ def _sandbox_root_is_overflow_uid() -> bool:
         return False
 
 
+def ssh_host_execution_required(
+    *, env: Mapping[str, str] | None = None
+) -> bool:
+    """Return whether OpenSSH must be invoked outside the Codex sandbox.
+
+    WSL Codex sandboxes can map host UID/GID 0 to the overflow identity 65534.
+    OpenSSH then rejects otherwise-valid system configuration ownership.  Do
+    not interpret that sandbox-only view as host filesystem damage and do not
+    try to repair privileged paths from the sandbox.
+    """
+
+    values = os.environ if env is None else env
+    return bool(values.get("WSL_DISTRO_NAME")) and _sandbox_root_is_overflow_uid()
+
+
 def resolve_ssh_control_plane(
     *,
     env: Mapping[str, str] | None = None,
@@ -107,7 +122,7 @@ def resolve_ssh_control_plane(
 
     source = ENV_MODE if values.get(ENV_MODE) else (str(path) if config else "auto-detect")
     if mode == "auto":
-        should_delegate = bool(values.get("WSL_DISTRO_NAME")) and _sandbox_root_is_overflow_uid()
+        should_delegate = ssh_host_execution_required(env=values)
         mode = "host-wsl" if should_delegate else "native"
 
     if mode == "native":

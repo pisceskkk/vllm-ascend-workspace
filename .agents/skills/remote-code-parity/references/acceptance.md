@@ -25,6 +25,9 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 
 - after the sync-mode gate, the normal parity entrypoint runs a read-only
   `ssh -G` preflight before invoking the low-level sync
+- Codex runs the entire parity public entrypoint outside the filesystem sandbox
+  from its first call; a sandbox fallback returns
+  `ssh_host_execution_required` and invokes neither OpenSSH nor low-level sync
 - a system config ownership failure returns the formal OpenSSH knowledge id and
   does not invoke Git push, bundle fallback, or any remote mutation
 - the skill treats the local working tree as the source of truth, including committed, staged, unstaged, and untracked **non-ignored** files

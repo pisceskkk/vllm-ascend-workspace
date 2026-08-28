@@ -145,6 +145,14 @@ repair, and remove wrappers run the shared local OpenSSH client preflight. The
 preflight uses `ssh -G` with the actual host, port, and user, so it parses the
 effective configuration without opening a network connection.
 
+When Codex provides a filesystem sandbox, invoke the entire public wrapper in
+the approved host execution plane from the first call. Do not run only
+`ssh -G` outside and then return the owning workflow to the sandbox. If a
+fallback invocation sees `/etc/ssh` as overflow UID/GID 65534, it returns
+`category: ssh_host_execution_required`, sets `host_execution_required: true`,
+and performs no SSH command or filesystem mutation. Rerun the same wrapper
+outside the sandbox; do not repair paths based on the sandbox-only observation.
+
 If OpenSSH reports `bad owner or permissions on ...`, the wrapper returns
 `status: blocked`, `action: ssh-client-preflight`, and knowledge id
 `machine-management-openssh-system-config-ownership`. It may inspect the

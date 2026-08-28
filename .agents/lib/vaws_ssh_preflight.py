@@ -10,7 +10,11 @@ import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
-from vaws_ssh_control import SshControlPlaneError, resolve_ssh_control_plane
+from vaws_ssh_control import (
+    SshControlPlaneError,
+    resolve_ssh_control_plane,
+    ssh_host_execution_required,
+)
 
 
 KNOWLEDGE_ID = "machine-management-openssh-system-config-ownership"
@@ -115,28 +119,54 @@ def ssh_client_preflight(
     *,
     port: int = 22,
     user: str = "root",
+    ssh_config: str | Path | None = None,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     runner: Runner | None = None,
 ) -> dict[str, Any]:
     """Parse effective SSH configuration without opening a network connection."""
 
     destination = f"{user}@{host}"
+    native_command = ["ssh"]
+    if ssh_config is not None:
+        native_command.extend(["-F", str(Path(ssh_config).expanduser().resolve())])
+    native_command.extend(["-G", "-p", str(port), destination])
+    if ssh_host_execution_required():
+        return {
+            "target": {"host": host, "port": port, "user": user, "destination": destination},
+            "check": "ssh-config",
+            "command": native_command,
+            "mutated": False,
+            "status": "blocked",
+            "category": "ssh_host_execution_required",
+            "message": (
+                "the Codex WSL sandbox maps host root ownership to overflow UID/GID; "
+                "rerun the owning public SSH workflow outside the filesystem sandbox"
+            ),
+            "host_execution_required": True,
+            "repair_required": False,
+            "auto_repaired": False,
+            "sandbox_observation": {"path": "/etc/ssh", "uid": 65534, "gid": 65534},
+        }
     try:
         control_plane = resolve_ssh_control_plane()
     except SshControlPlaneError as exc:
         return {
             "target": {"host": host, "port": port, "user": user, "destination": destination},
             "check": "ssh-config",
-            "command": ["ssh", "-G", "-p", str(port), destination],
+            "command": native_command,
             "mutated": False,
             "status": "blocked",
             "category": "ssh_control_plane_invalid",
             "message": str(exc),
         }
+    command = [*control_plane.command_prefix]
+    if ssh_config is not None:
+        command.extend(["-F", str(Path(ssh_config).expanduser().resolve())])
+    command.extend(["-G", "-p", str(port), destination])
     base: dict[str, Any] = {
         "target": {"host": host, "port": port, "user": user, "destination": destination},
         "check": "ssh-config",
-        "command": [*control_plane.command_prefix, "-G", "-p", str(port), destination],
+        "command": command,
         "ssh_control_plane": control_plane.as_dict(),
         "mutated": False,
     }
@@ -217,4 +247,6 @@ def blocked_status_payload(result: dict[str, Any], *, action: str) -> dict[str, 
     }
     if result.get("knowledge_id"):
         payload["knowledge_id"] = result["knowledge_id"]
+    if result.get("host_execution_required"):
+        payload["host_execution_required"] = True
     return payload

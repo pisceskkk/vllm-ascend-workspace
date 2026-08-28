@@ -58,6 +58,16 @@ class SshControlPlaneTests(unittest.TestCase):
 
         self.assertEqual(resolved.mode, "host-wsl")
 
+    def test_host_execution_required_for_wsl_overflow_view(self) -> None:
+        with mock.patch.object(control, "_sandbox_root_is_overflow_uid", return_value=True):
+            self.assertTrue(
+                control.ssh_host_execution_required(env={"WSL_DISTRO_NAME": "Ubuntu"})
+            )
+
+    def test_host_execution_not_required_outside_wsl(self) -> None:
+        with mock.patch.object(control, "_sandbox_root_is_overflow_uid", return_value=True):
+            self.assertFalse(control.ssh_host_execution_required(env={}))
+
     def test_environment_mode_overrides_file(self) -> None:
         path = self.config({"mode": "host-wsl", "distribution": "Ubuntu", "user": "developer"})
         with mock.patch.object(control.shutil, "which", return_value="/usr/bin/ssh"):

@@ -33,6 +33,13 @@ These should not trigger `machine-management` unless machine readiness is the ob
 
 - add, verify, repair, and remove run a read-only `ssh -G` preflight before
   their first network SSH attempt
+- Codex invokes the full public wrapper outside the filesystem sandbox from its
+  first call, using a narrow wrapper approval rather than a broad `ssh` or
+  `python3` approval
+- a sandbox overflow UID/GID view returns
+  `category: ssh_host_execution_required` with
+  `host_execution_required: true`, runs no OpenSSH command, and never suggests
+  repairing host paths
 - a system SSH config ownership failure returns `status: blocked`, action
   `ssh-client-preflight`, and the matching formal knowledge id
 - the preflight does not use `ssh -F` and does not modify `/etc/ssh`

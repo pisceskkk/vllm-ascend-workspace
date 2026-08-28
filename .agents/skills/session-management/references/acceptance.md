@@ -1,6 +1,9 @@
 # Acceptance
 
 - New session records include `agent_identity.agent_id` and `agent_identity.alias` when available.
+- Codex invokes SSH-backed session public entrypoints outside the filesystem
+  sandbox from the first call; sandbox overflow ownership never triggers host
+  SSH permission repair.
 - Unified aliases participate in new session container naming through the persisted machine namespace.
 - Missing identities and declined aliases preserve legacy behavior.
 - Coordinator submit defaults to the persistent UUID and publishes the configured alias without requiring `--agent-id`.

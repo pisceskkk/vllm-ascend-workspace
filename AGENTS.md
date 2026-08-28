@@ -41,6 +41,28 @@ permissive by default, and direct endpoints default to full remote-path
 permission (`root=/`). Pass a narrower `root` explicitly when a task requires
 path isolation.
 
+### SSH host-execution boundary
+
+Codex WSL filesystem sandboxes may expose host-owned UID/GID 0 as the overflow
+identity 65534. OpenSSH correctly rejects that sandbox view of system client
+configuration even when the owning WSL distribution reports valid
+`root:root` ownership.
+
+- Run every local public entrypoint that parses OpenSSH configuration or
+  invokes OpenSSH outside the Codex filesystem sandbox from its first call.
+  With `exec_command`, use `sandbox_permissions=require_escalated` and a narrow
+  prefix for the concrete repository entrypoint; never approve bare `ssh` or
+  generic `python3`.
+- This boundary covers both `ssh -G` and the full owning workflow. Running only
+  the preflight outside the sandbox is insufficient because the later SSH
+  process parses the same configuration again.
+- Remote companion tools already provide the preferred host execution plane;
+  do not wrap them in raw SSH.
+- If a sandboxed fallback reports `category=ssh_host_execution_required`, rerun
+  the same public workflow outside the sandbox. Do not `chown`/`chmod`
+  `/etc/ssh`, do not use `ssh -F /dev/null`, and do not treat UID/GID 65534 in
+  the sandbox as proof of host filesystem damage.
+
 ## GPU-prefixed vLLM tools
 
 NVIDIA GPU workspaces use a second, repository-level tool set under
@@ -110,6 +132,9 @@ for domain workflows.
   state under `.remote-dev/state/`. Both are untracked.
 - Keep `.gitmodules` on community upstream URLs.
 - Prefer `.remote-dev` remote companion tools or skill wrapper scripts over raw SSH / shell commands for remote operations.
+- Apply the SSH host-execution boundary above to all SSH-backed Skill and
+  repository entrypoints, including machine/session management, parity,
+  remote-toolbox compatibility commands, GPU tools, and GPU image deployment.
 - Skill wrappers: progress on `stderr`, final JSON on `stdout`.
 - Execution skills must use Run Manifest v1 from `.agents/lib/vaws_run_manifest.py` for new cross-workflow runs and keep manifests under untracked `.vaws-local/`.
 - Read fast-changing compatibility, capability, validation, and failure-signature facts from `.agents/knowledge/`; treat missing facts as unknown rather than supported.

@@ -67,6 +67,9 @@ Before this skill mutates anything remotely, confirm all of these:
 - after resolving a `local` sync mode, run the shared `ssh -G` client-config
   preflight against the actual container endpoint; a local system config
   ownership failure blocks before snapshot publication or SSH transport
+- under Codex, run the entire parity entrypoint in the approved host execution
+  plane; a sandbox overflow UID/GID view returns
+  `ssh_host_execution_required` before OpenSSH or remote mutation
 - the target container already accepts direct local -> container key-based SSH
 - the runtime root inside the container is known
 - the workspace submodules required for execution are initialized and populated

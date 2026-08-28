@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
 
@@ -22,16 +23,21 @@ def completed(returncode: int, stderr: str = "") -> subprocess.CompletedProcess[
 
 
 class SshPreflightTests(unittest.TestCase):
+    @contextmanager
     def native_control_plane(self):
-        return mock.patch.object(
-            preflight,
-            "resolve_ssh_control_plane",
-            return_value=SshControlPlane(
-                mode="native",
-                command_prefix=("ssh",),
-                source="test",
+        with (
+            mock.patch.object(preflight, "ssh_host_execution_required", return_value=False),
+            mock.patch.object(
+                preflight,
+                "resolve_ssh_control_plane",
+                return_value=SshControlPlane(
+                    mode="native",
+                    command_prefix=("ssh",),
+                    source="test",
+                ),
             ),
-        )
+        ):
+            yield
 
     def test_success_is_read_only_and_ready(self) -> None:
         runner = mock.Mock(return_value=completed(0))
@@ -71,10 +77,13 @@ class SshPreflightTests(unittest.TestCase):
 
     def test_invalid_control_plane_blocks_before_network_use(self) -> None:
         runner = mock.Mock()
-        with mock.patch.object(
-            preflight,
-            "resolve_ssh_control_plane",
-            side_effect=SshControlPlaneError("wsl.exe was not found"),
+        with (
+            mock.patch.object(preflight, "ssh_host_execution_required", return_value=False),
+            mock.patch.object(
+                preflight,
+                "resolve_ssh_control_plane",
+                side_effect=SshControlPlaneError("wsl.exe was not found"),
+            ),
         ):
             result = preflight.ssh_client_preflight("host", runner=runner)
 
@@ -104,7 +113,10 @@ class SshPreflightTests(unittest.TestCase):
             distribution="Ubuntu",
             user="developer",
         )
-        with mock.patch.object(preflight, "resolve_ssh_control_plane", return_value=delegated):
+        with (
+            mock.patch.object(preflight, "ssh_host_execution_required", return_value=False),
+            mock.patch.object(preflight, "resolve_ssh_control_plane", return_value=delegated),
+        ):
             result = preflight.ssh_client_preflight("host", port=46001, runner=runner)
 
         self.assertEqual(result["status"], "ready")
@@ -116,6 +128,17 @@ class SshPreflightTests(unittest.TestCase):
                 "-G", "-p", "46001", "root@host",
             ],
         )
+
+    def test_wsl_overflow_view_requires_host_execution_before_ssh(self) -> None:
+        runner = mock.Mock()
+        with mock.patch.object(preflight, "ssh_host_execution_required", return_value=True):
+            result = preflight.ssh_client_preflight("host", runner=runner)
+
+        self.assertEqual(result["status"], "blocked")
+        self.assertEqual(result["category"], "ssh_host_execution_required")
+        self.assertTrue(result["host_execution_required"])
+        self.assertFalse(result["repair_required"])
+        runner.assert_not_called()
 
 
 if __name__ == "__main__":

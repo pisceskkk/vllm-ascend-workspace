@@ -2,6 +2,8 @@
 
 - `python3 -m compileall -q .agents`
 - `git diff --check -- .agents AGENTS.md README.md README.en.md`
+- Codex runs SSH-backed `remote_*` entrypoints in the approved host execution
+  plane from the first call and never approves bare `ssh` or generic `python3`
 - Every new `remote_*` CLI accepts `--help`.
 - `remote_probe` succeeds on 125 and 131 and reports CANN, Python, torch,
   torch_npu, NPU facts, and host/container endpoints.

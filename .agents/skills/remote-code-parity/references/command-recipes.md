@@ -20,7 +20,8 @@ Prefer the helper scripts in `scripts/` when possible.
 
 The normal `parity_sync.py` path checks the resolved container endpoint with
 the shared read-only OpenSSH preflight before low-level sync. To inspect the
-same local client configuration directly:
+same local client configuration directly, run this command in Codex's approved
+host execution plane. Run the later parity entrypoint in that same plane:
 
 ```bash
 python3 .agents/scripts/ssh_preflight.py 10.0.0.8 --user root --port 46001

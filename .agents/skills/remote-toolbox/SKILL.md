@@ -16,6 +16,12 @@ ps/kill commands.
 
 ## Critical Rules
 
+- Invoke every SSH-backed `remote_*` entrypoint outside the Codex filesystem
+  sandbox from its first call, with a narrow approval for the concrete wrapper.
+  Do not approve bare `ssh` or generic `python3`.
+- If a sandboxed fallback reports `ssh_host_execution_required`, rerun the same
+  public wrapper outside the sandbox; do not repair `/etc/ssh` or bypass its
+  configuration.
 - Prefer `--session-id` or `--session-file` for parallel work. Use `--machine`
   only for explicitly single-tenant legacy flows.
 - Entry points stream progress to `stderr` as `__VAWS_REMOTE_TOOLBOX_PROGRESS__=<json>`.

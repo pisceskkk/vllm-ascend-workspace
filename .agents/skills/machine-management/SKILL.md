@@ -32,10 +32,18 @@ Ready does **not** imply code sync, rebuild, serving, or benchmark readiness.
 ## Critical rules
 
 - Probe first.
+- Invoke the selected public machine workflow outside the Codex filesystem
+  sandbox from its first call. Use a narrowly scoped approval for that wrapper,
+  not bare `ssh` or generic `python3`; the wrapper owns both `ssh -G` and every
+  later SSH process.
 - Before the first network SSH attempt, run the shared read-only `ssh -G`
   client-config preflight. Fail closed with the formal knowledge id when
   OpenSSH rejects a system config path; never bypass it with `ssh -F` and never
   auto-repair `/etc/ssh` permissions.
+- If a mistakenly sandboxed invocation returns
+  `category=ssh_host_execution_required`, rerun the same public wrapper outside
+  the sandbox. Overflow UID/GID 65534 is a sandbox mapping signal, not evidence
+  that the host SSH files require repair.
 - Be idempotent and conservative.
 - Keep mutations bounded to the requested machine.
 - Treat the bare-metal host as a maintenance plane, not a developer workspace.

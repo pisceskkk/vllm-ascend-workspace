@@ -58,10 +58,17 @@ Keep a **ready** remote runtime in exact code parity with the local `vllm-ascend
 - Before invoking parity, confirm the local working tree represents the **intended deployment state**. If any submodule source files have uncommitted changes made for temporary debugging or hypothesis testing, revert them before syncing — do not sync exploratory patches to the remote.
 - If a previous parity sync in this session led to a failed remote execution and the agent subsequently modified local code, do not re-sync until the root cause of the failure is confirmed from remote logs (not from hypothesis).
 - Fail closed if parity cannot be proven.
+- Invoke `parity_sync.py` or the owning `remote_sync_*` public workflow outside
+  the Codex filesystem sandbox from its first call, using a narrow approval for
+  the concrete entrypoint. The same process owns preflight, Git-over-SSH, and
+  fallback SSH transport.
 - After the sync-mode gate and before the first remote mutation, run the shared
   read-only OpenSSH client-config preflight for the resolved container
   endpoint. Return the formal knowledge id for a system config ownership
   failure instead of retrying transport fallbacks.
+- If a sandboxed fallback returns `category=ssh_host_execution_required`, rerun
+  the same public parity workflow outside the sandbox; never repair `/etc/ssh`
+  or switch to `ssh -F /dev/null` based on overflow UID/GID 65534.
 - First replacement of image-provided `vllm` / `vllm-ascend` requires explicit user consent for that logical container identity.
 - `install_consent.py set`, `batch-set`, and `set-sync-mode` must include `--approved-by-user`.
 - If the user explicitly says to use local `vllm` / `vllm-ascend`, replace image packages, or run current workspace code remotely, record both decisions in one atomic write: `set-sync-mode --sync-mode local --allow-first-install --approved-by-user`. Do not ask a second first-install question for the same container identity.

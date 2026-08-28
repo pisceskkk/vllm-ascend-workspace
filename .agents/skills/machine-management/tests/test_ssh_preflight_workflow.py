@@ -40,6 +40,21 @@ class SshPreflightWorkflowTests(unittest.TestCase):
         with mock.patch.object(workflow, "ssh_client_preflight", return_value={"status": "ready"}):
             self.assertIsNone(workflow.ssh_client_preflight_blocker(target))
 
+    def test_host_execution_requirement_is_preserved_for_agent_rerun(self) -> None:
+        target = workflow.machine_ops.SshTarget(host="host", port=22, user="root")
+        observed = {
+            "status": "blocked",
+            "category": "ssh_host_execution_required",
+            "host_execution_required": True,
+            "message": "rerun outside sandbox",
+        }
+        with mock.patch.object(workflow, "ssh_client_preflight", return_value=observed):
+            result = workflow.ssh_client_preflight_blocker(target)
+
+        assert result is not None
+        self.assertTrue(result["host_execution_required"])
+        self.assertEqual(result["ssh_preflight"]["category"], "ssh_host_execution_required")
+
 
 if __name__ == "__main__":
     unittest.main()
