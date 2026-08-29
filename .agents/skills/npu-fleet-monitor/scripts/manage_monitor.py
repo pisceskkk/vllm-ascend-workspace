@@ -13,7 +13,7 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_BRANCH = "codex/npu-fleet-monitor"
+DEFAULT_BRANCH = "vaws-top"
 DEFAULT_URL = "http://127.0.0.1:8789/api/health"
 
 
@@ -99,7 +99,10 @@ def resolve_worktree(branch: str, requested: Path | None, *, create: bool) -> Pa
 
 
 def validate_project(worktree: Path, branch: str) -> str:
-    required = ("package.json", "scripts/install-user-service.sh", "deploy/npu-fleet-monitor.service")
+    required = (
+        "package.json", "scripts/install-user-service.sh", "deploy/npu-fleet-monitor.service",
+        ".agents/skills/vaws-top/SKILL.md",
+    )
     missing = [name for name in required if not (worktree / name).is_file()]
     if missing:
         raise MonitorError(f"monitor branch is missing required files: {', '.join(missing)}")
@@ -184,6 +187,7 @@ def payload_for(action: str, branch: str, worktree: Path | None, commit: str | N
         "branch": branch,
         "commit": commit,
         "worktree": str(worktree) if worktree else None,
+        "agent_skill": str(worktree / ".agents/skills/vaws-top/SKILL.md") if worktree else None,
         "service": systemd_properties(),
         "url": "http://127.0.0.1:8788",
         "health": health_payload,
@@ -212,6 +216,7 @@ def main() -> int:
                 "branch": args.branch,
                 "commit": commit,
                 "worktree": str(worktree),
+                "agent_skill": str(worktree / ".agents/skills/vaws-top/SKILL.md"),
                 "service": systemd_properties(),
                 "url": "http://127.0.0.1:8788",
                 "health": health_payload,
