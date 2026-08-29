@@ -116,6 +116,13 @@ try {
         Headers = $headers
         TimeoutSec = $timeout
     }
+    $invokeWebRequest = Get-Command Invoke-WebRequest
+    if ($invokeWebRequest.Parameters.ContainsKey("NoProxy")) {
+        $invoke.NoProxy = $true
+    }
+    else {
+        [System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebProxy]::new()
+    }
     if ($null -ne $request.body -and $method -ne "GET") {
         $secretTarget = $request.body.__secret_credential_target
         $secretField = $request.body.__secret_field

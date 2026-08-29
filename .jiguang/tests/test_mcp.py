@@ -15,6 +15,12 @@ from mcp.tools import call_tool  # noqa: E402
 
 
 class McpTests(unittest.TestCase):
+    def test_host_bridge_explicitly_disables_system_proxy(self) -> None:
+        bridge = (ROOT / "host" / "jiguang_http.ps1").read_text(encoding="utf-8")
+        self.assertIn('Parameters.ContainsKey("NoProxy")', bridge)
+        self.assertIn("$invoke.NoProxy = $true", bridge)
+        self.assertIn("DefaultWebProxy", bridge)
+
     def test_tool_catalog_contains_no_admin_or_container_create(self) -> None:
         request = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}) + "\n"
         completed = subprocess.run(
