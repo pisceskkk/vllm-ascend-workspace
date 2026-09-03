@@ -97,7 +97,10 @@ def run_host_script(target: machine_ops.SshTarget, source: str, args: list[str])
 
 
 def ensure(args: argparse.Namespace) -> dict[str, Any]:
-    gate = workspace_gate(args.repo_root.resolve())
+    gate = workspace_gate(
+        args.repo_root.resolve(),
+        explicit_vllm_commit=args.vllm_commit,
+    )
     if gate["outcome"] != "ready":
         return gate
     machine_record = workflow.find_record(args.machine)
@@ -203,7 +206,10 @@ def ensure(args: argparse.Namespace) -> dict[str, Any]:
 def rollback(args: argparse.Namespace) -> dict[str, Any]:
     if not args.confirm:
         return {"outcome": "planned", "action": "rollback", "requires_confirm": True}
-    gate = workspace_gate(args.repo_root.resolve())
+    gate = workspace_gate(
+        args.repo_root.resolve(),
+        explicit_vllm_commit=args.vllm_commit,
+    )
     if gate["outcome"] != "ready":
         return gate
     machine_record = workflow.find_record(args.machine)
@@ -249,9 +255,11 @@ def parser() -> argparse.ArgumentParser:
     ensure_parser.add_argument("--force-clean", action="store_true")
     ensure_parser.add_argument("--private-key-file", required=True)
     ensure_parser.add_argument("--confirm", action="store_true")
+    ensure_parser.add_argument("--vllm-commit", help="explicit user-specified vLLM commit override")
     rollback_parser = actions.add_parser("rollback")
     rollback_parser.add_argument("--machine", required=True)
     rollback_parser.add_argument("--confirm", action="store_true")
+    rollback_parser.add_argument("--vllm-commit", help="explicit user-specified vLLM commit override")
     return root
 
 

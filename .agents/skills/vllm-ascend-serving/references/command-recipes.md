@@ -24,6 +24,21 @@ python3 .agents/skills/vllm-ascend-serving/scripts/serve_start.py \
 
 Session mode uses the session container and writes state under `.vaws-local/sessions/pr123/serving.json`.
 
+## Fresh start with an explicit vLLM commit override
+
+Use this only when the user explicitly supplied the commit:
+
+```bash
+python3 .agents/skills/vllm-ascend-serving/scripts/serve_start.py \
+  --machine blue-a \
+  --vllm-commit <sha> \
+  --model /data/models/Qwen3-32B \
+  --tp 4
+```
+
+Without this option, parity requires vLLM HEAD to match the checked-out
+vllm-ascend HEAD verified pin.
+
 ## Fresh start with extra vllm args
 
 ```bash
@@ -96,6 +111,9 @@ Boolean flags like `--enforce-eager` are removed alone (the next token is not co
 python3 .agents/skills/vllm-ascend-serving/scripts/serve_start.py \
   --machine blue-a --relaunch --skip-parity
 ```
+
+This skips code transport only. The local vLLM/vllm-ascend pairing gate still
+runs and blocks a mismatched pair.
 
 ## Start with a forced port
 

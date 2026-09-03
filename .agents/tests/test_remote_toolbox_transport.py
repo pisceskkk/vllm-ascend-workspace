@@ -7,6 +7,8 @@ import base64
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 LIB = ROOT / ".agents" / "lib"
@@ -36,6 +38,22 @@ class RemoteToolboxTransportTests(unittest.TestCase):
         command = toolbox._ssh_base_cmd(endpoint, stdin=True)
         self.assertIn("-T", command)
         self.assertNotIn("-n", command)
+
+    def test_sync_derivation_forwards_explicit_vllm_commit(self) -> None:
+        target = SimpleNamespace(session_file=None, session_id=None, alias="blue-a")
+        with mock.patch.object(
+            toolbox,
+            "_run_json_command",
+            return_value=(0, {"status": "ok"}, "{}", ""),
+        ) as run:
+            result = toolbox.parity_derived_args(
+                target,
+                vllm_commit="a" * 40,
+            )
+
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index("--vllm-commit") + 1], "a" * 40)
+        self.assertEqual(result["vllm_commit"], "a" * 40)
 
 
 if __name__ == "__main__":

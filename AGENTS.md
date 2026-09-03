@@ -146,6 +146,13 @@ for domain workflows.
 - Keep VAWS runtime state under `.vaws-local/` and remote-dev endpoint/tool
   state under `.remote-dev/state/`. Both are untracked.
 - Keep `.gitmodules` on community upstream URLs.
+- Enforce strict vLLM/vllm-ascend source pairing. Unless the user explicitly
+  supplies a vLLM commit to the owning workflow, resolve the only permitted
+  vLLM commit from `.github/vllm-main-verified.commit` at the checked-out
+  `vllm-ascend` HEAD. Never infer compatibility from the current vLLM HEAD,
+  `main`, a workflow matrix, docs, a release tag, or a parent gitlink. Run
+  `.agents/scripts/vllm_version_pairing.py check` before remote execution and
+  fail closed on a missing/invalid pin or commit mismatch.
 - Prefer `.remote-dev` remote companion tools or skill wrapper scripts over raw SSH / shell commands for remote operations.
 - Apply the SSH host-execution boundary above to all SSH-backed Skill and
   repository entrypoints, including machine/session management, parity,

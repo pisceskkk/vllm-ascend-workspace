@@ -32,8 +32,14 @@ This skill takes structured parameters, handles all SSH escaping and remote exec
 
 ## Critical rules
 
-- `start` automatically runs `remote-code-parity` before launching. If parity fails, start is blocked.
-- `status` and `stop` do not require parity.
+- `start` enforces source pairing immediately after target resolution and before
+  stopping an existing service or making another remote lifecycle change. It
+  then automatically runs `remote-code-parity` before launching. If either
+  gate fails, start is blocked. Pass `--vllm-commit <sha>` only when the user
+  explicitly supplied a vLLM commit; otherwise the vllm-ascend HEAD verified
+  pin is mandatory.
+- `status` and `stop` do not require parity. `--skip-parity` skips transport,
+  not the local source-pairing gate.
 - For parallel agent work, use `session-management` first and pass `--session-id <id>`. Session mode reads and writes `.vaws-local/sessions/<id>/serving.json` and never stops another session's service.
 - Session mode serializes `start` / `stop` operations for the same session with a serving lock; different sessions remain independent.
 - Once a remote PID is launched, `serve_start.py` writes `serving.json` with `status=starting` before health probing so `serve_stop.py` can clean up even if readiness later fails.
@@ -63,6 +69,7 @@ python3 .agents/skills/vllm-ascend-serving/scripts/serve_start.py \
   [--port <N>] \
   [--health-timeout <seconds>] \
   [--wrap-script <remote-path>] \
+  [--vllm-commit <explicit-sha>] \
   [--skip-parity] \
   [-- <extra vllm serve args>]
 ```
@@ -146,7 +153,7 @@ If a previous service is recorded for this target, it is stopped before launchin
 
 ### 3. Run remote-code-parity (start only)
 
-Unless `--skip-parity` is passed, `parity_sync.py` is called to ensure the container has the current local code. If parity fails, start is blocked.
+Unless `--skip-parity` is passed, `parity_sync.py` is called to ensure the container has the current local code and a proven vLLM/vllm-ascend source pair. If the user explicitly supplied a vLLM commit, pass it with `--vllm-commit`; otherwise omit the option so the verified pin is mandatory. If parity fails, start is blocked and preserves the structured pairing reason.
 
 ### 4. Probe NPUs
 

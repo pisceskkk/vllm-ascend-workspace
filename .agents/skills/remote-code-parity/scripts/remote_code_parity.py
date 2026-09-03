@@ -40,6 +40,13 @@ from common import (
     update_state,
 )
 
+ROOT = Path(__file__).resolve().parents[4]
+LIB_DIR = ROOT / '.agents' / 'lib'
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+from vllm_version_pairing import check_workspace_vllm_pairing  # noqa: E402
+
 
 VLLM_REINSTALL_PATTERNS = (
     'requirements*',
@@ -1444,6 +1451,7 @@ def make_manifest(
     root_preserve_paths: tuple[str, ...],
     records: list[SnapshotRecord],
     runtime_install_env: dict[str, str] | None = None,
+    vllm_version_pairing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     git_name, git_email = ensure_local_git_identity(workspace_root)
     return {
@@ -1461,6 +1469,7 @@ def make_manifest(
         'git_identity': {'name': git_name, 'email': git_email},
         'repos': [asdict(record) for record in records],
         'runtime_install_env': runtime_install_env or {},
+        'vllm_version_pairing': vllm_version_pairing or {},
         'local_source_of_truth': 'tracked + staged + unstaged + untracked-nonignored',
     }
 
@@ -1478,6 +1487,7 @@ def summary_payload(
     first_install: bool,
     runtime_install_env: dict[str, str] | None = None,
     observed_runtime_commits: dict[str, str] | None = None,
+    vllm_version_pairing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         'status': status,
@@ -1490,6 +1500,7 @@ def summary_payload(
         'runtime_commits': observed_runtime_commits,
         'reinstall': reinstall_status,
         'runtime_install_env': runtime_install_env or {},
+        'vllm_version_pairing': vllm_version_pairing or {},
         'reason': reason,
     }
 
@@ -1541,6 +1552,7 @@ def run_plan(args: argparse.Namespace) -> int:
             marker_dirname=marker_dirname,
             root_preserve_paths=root_preserve_paths,
             records=records,
+            vllm_version_pairing=args.vllm_version_pairing,
         )
         print(json_dump(manifest))
         return 0
@@ -1614,6 +1626,7 @@ def run_sync(args: argparse.Namespace) -> int:
                     root_preserve_paths=root_preserve_paths,
                     records=records,
                     runtime_install_env=runtime_install_env,
+                    vllm_version_pairing=args.vllm_version_pairing,
                 )
                 manifest['apply_mode'] = args.apply_mode
                 if args.print_manifest:
@@ -1632,6 +1645,7 @@ def run_sync(args: argparse.Namespace) -> int:
                         first_install=False,
                         runtime_install_env=runtime_install_env,
                         observed_runtime_commits=None,
+                        vllm_version_pairing=args.vllm_version_pairing,
                     )
                     summary['apply_mode'] = args.apply_mode
                     summary['manifest_path'] = manifest_path
@@ -1716,6 +1730,7 @@ def run_sync(args: argparse.Namespace) -> int:
                                 first_install=False,
                                 runtime_install_env=runtime_install_env,
                                 observed_runtime_commits=observed_runtime_commits,
+                                vllm_version_pairing=args.vllm_version_pairing,
                             )
                             summary['apply_mode'] = args.apply_mode
                             summary['manifest_path'] = manifest_path
@@ -1750,6 +1765,7 @@ def run_sync(args: argparse.Namespace) -> int:
                         first_install=False,
                         runtime_install_env=runtime_install_env,
                         observed_runtime_commits=observed_runtime_commits,
+                        vllm_version_pairing=args.vllm_version_pairing,
                     )
                     summary['apply_mode'] = args.apply_mode
                     summary['manifest_path'] = manifest_path
@@ -1789,6 +1805,7 @@ def run_sync(args: argparse.Namespace) -> int:
                         first_install=False,
                         runtime_install_env=last_container_state.get('last_runtime_install_env', {}),
                         observed_runtime_commits=observed,
+                        vllm_version_pairing=args.vllm_version_pairing,
                     )
                     print(json_dump(summary))
                     return 0
@@ -1818,6 +1835,7 @@ def run_sync(args: argparse.Namespace) -> int:
                         reason='first-time runtime replacement requires explicit consent',
                         first_install=True,
                         observed_runtime_commits=None,
+                        vllm_version_pairing=args.vllm_version_pairing,
                     )
                     print(json_dump(summary))
                     return 2
@@ -1847,6 +1865,7 @@ def run_sync(args: argparse.Namespace) -> int:
                 root_preserve_paths=root_preserve_paths,
                 records=records,
                 runtime_install_env=runtime_install_env,
+                vllm_version_pairing=args.vllm_version_pairing,
             )
             if args.print_manifest:
                 print(json_dump(manifest))
@@ -1865,6 +1884,7 @@ def run_sync(args: argparse.Namespace) -> int:
                     first_install=first_install,
                     runtime_install_env=runtime_install_env,
                     observed_runtime_commits=None,
+                    vllm_version_pairing=args.vllm_version_pairing,
                 )
                 print(json_dump(summary))
                 return 0
@@ -2050,6 +2070,7 @@ def run_sync(args: argparse.Namespace) -> int:
                         first_install=first_install,
                         runtime_install_env=runtime_install_env,
                         observed_runtime_commits=observed_runtime_commits,
+                        vllm_version_pairing=args.vllm_version_pairing,
                     )
                     summary['transfers'] = transfer_reports
                     print(json_dump(summary))
@@ -2096,6 +2117,7 @@ def run_sync(args: argparse.Namespace) -> int:
                     first_install=first_install,
                     runtime_install_env=runtime_install_env,
                     observed_runtime_commits=observed_runtime_commits,
+                    vllm_version_pairing=args.vllm_version_pairing,
                 )
                 summary['transfers'] = transfer_reports
                 print(json_dump(summary))
@@ -2121,6 +2143,11 @@ def build_parser() -> argparse.ArgumentParser:
         target.add_argument('--container-cache-root', default=DEFAULT_CONTAINER_CACHE_ROOT)
         target.add_argument('--marker-dirname', default=DEFAULT_MARKER_DIRNAME)
         target.add_argument('--preserve-path', action='append', default=[])
+        target.add_argument(
+            '--vllm-commit',
+            default=None,
+            help='Explicit user-specified vLLM commit override; otherwise enforce the vllm-ascend HEAD verified pin.',
+        )
 
     plan = subparsers.add_parser('plan', help='Build a synthetic snapshot manifest without remote mutations.')
     add_shared_arguments(plan)
@@ -2160,6 +2187,18 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
+        pairing = check_workspace_vllm_pairing(
+            repo_root_from(Path(args.workspace_root)),
+            explicit_vllm_commit=args.vllm_commit,
+        )
+        if pairing.get('status') != 'ready':
+            print(json_dump({
+                'status': 'blocked',
+                'reason': pairing.get('reason', 'vLLM/vllm-ascend pairing could not be proven'),
+                'vllm_version_pairing': pairing,
+            }))
+            return 2
+        args.vllm_version_pairing = pairing
         if args.command == 'plan':
             return run_plan(args)
         if args.command == 'sync':

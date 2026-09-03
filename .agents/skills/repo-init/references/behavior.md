@@ -65,7 +65,10 @@ That question must cover:
 - machine username choice when the profile is missing
 - repo topology mode: keep current, recommended fork mode, or community-only
 - whether to initialize submodules now
-- vllm submodule version alignment (CI-pinned / upstream main / keep current) — always include this when the probe shows submodules are uninitialized, because all questions are asked in one batch and you cannot wait for the submodule-init answer first; ignore the answer if the user later declines submodule init
+- a notice, whenever populated submodules are or will be in scope, that vLLM
+  will be aligned automatically: use an
+  explicitly user-supplied vLLM commit when present, otherwise use only the
+  checked-out vllm-ascend HEAD's `.github/vllm-main-verified.commit`
 
 For the machine username branch, use the fixed three-option model from `repo_init_profile.py plan`:
 
@@ -112,12 +115,13 @@ For narrow Git-only tasks, skip this stage.
 
 Always use recursive sync + init for this repo.
 
-When the user chose CI-pinned vLLM alignment, resolve the tested vLLM ref with
-`resolve_vllm_ci_pin.py` after `vllm-ascend/` is populated. The resolver
-prefers `.github/vllm-main-verified.commit`, which is the current upstream
-source of truth, and falls back to older workflow/docs sources for older
-checkouts. Report the resolver source in the summary so later remote install
-or parity work can tell which pairing was deployed.
+Once `vllm-ascend/` is populated, always resolve and check the exact vLLM
+commit. An explicit user-supplied vLLM commit is the only override. Otherwise,
+`resolve_vllm_ci_pin.py` must read `.github/vllm-main-verified.commit` from the
+checked-out vllm-ascend HEAD and fail closed if it is missing or invalid. It
+must not fall back to workflow matrices, docs, release tags, `main`, the
+current vLLM HEAD, or the workspace gitlink. Verify the final checkout with
+`.agents/scripts/vllm_version_pairing.py check` and report the pairing source.
 
 ### Stage 6: topology
 

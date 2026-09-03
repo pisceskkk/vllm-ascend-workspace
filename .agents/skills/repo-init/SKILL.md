@@ -89,6 +89,7 @@ Topology helper:
 CI-pinned vLLM resolver:
 
 - `python3 .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py --vllm-ascend-dir vllm-ascend`
+- add `--vllm-commit <sha>` only when the user explicitly specified that vLLM commit
 
 Reference files:
 
@@ -119,12 +120,16 @@ That checkpoint must cover:
    - recommended fork mode
    - community-only mode
 4. whether to initialize submodules now
-5. vllm submodule version alignment — **always include this question in the grouped checkpoint when the probe shows submodules are not yet initialized**. Since all questions are asked in a single batch, you cannot wait for the answer to question 4 before deciding whether to include question 5. If the user later chooses not to initialize submodules, simply ignore their version-alignment answer. Options:
-   - **CI-pinned** (default): check out `vllm/` at the commit CI actually tests against — resolve it with `resolve_vllm_ci_pin.py`, which prefers `vllm-ascend/.github/vllm-main-verified.commit` and falls back to older workflow/docs sources
-   - **upstream main**: both submodules track their respective upstream `main` HEAD
-   - **keep current**: leave `vllm/` at whatever commit it is already on
+5. vllm submodule version alignment notice whenever populated submodules are or
+   will be in scope:
+   - when the user explicitly supplied a vLLM commit, use that exact commit
+   - otherwise, automatically use the full commit SHA stored in
+     `.github/vllm-main-verified.commit` at the checked-out `vllm-ascend` HEAD
+   - this is a strict compatibility rule, not a choice between CI pin, main,
+     or the current checkout; state the automatic alignment in the checkpoint
 
-Skip question 4 only when the probe shows submodules are already initialized (nothing to align).
+Skip question 4 when the probe shows submodules are already initialized, but
+still include item 5 and run the mandatory pairing alignment/check.
 
 If the user only asked for a narrow GitHub auth / `gh` task, skip the machine-profile and version-alignment questions.
 
@@ -177,11 +182,19 @@ If the request was just “初始化仓库” or similarly broad, do not silentl
 
 ### 3a. Align vllm submodule version after submodule init
 
-After recursive submodule init completes, if the user chose CI-pinned alignment:
+After recursive submodule init completes, or immediately when both submodules
+were already populated, always align vLLM before continuing:
 
-- Extract the CI-pinned vllm ref with `python3 .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py --vllm-ascend-dir vllm-ascend`.
-- Prefer `.github/vllm-main-verified.commit` when present. Older checkouts may only expose a `vllm_version` workflow matrix or `docs/source/conf.py`; treat those as fallbacks and report which source was used.
+- If the user explicitly supplied a vLLM commit, pass it through
+  `--vllm-commit`; otherwise omit the option.
+- Extract the exact required commit with `python3 .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py --vllm-ascend-dir vllm-ascend`.
+- Without an explicit override, accept only
+  `.github/vllm-main-verified.commit` from the checked-out vllm-ascend HEAD.
+  Missing, malformed, workflow, docs, release-tag, current-HEAD, and `main`
+  fallbacks are forbidden; stop without changing vLLM.
 - Check out `vllm/` at that commit.
+- Run `python3 .agents/scripts/vllm_version_pairing.py check` with the same
+  explicit override, if any, and continue only on `status: ready`.
 - Report the active version combination (vllm commit + vllm-ascend branch) in the finish summary.
 
 ### 4. Apply approved changes in order
@@ -192,7 +205,7 @@ Execute categories in the order listed below. **Submodule init must complete bef
 2. `gh` install / configure
 3. GitHub auth
 4. recursive submodule init (`git submodule sync --recursive && git submodule update --init --recursive`)
-5. vllm submodule version alignment (CI-pinned checkout, if chosen)
+5. mandatory vllm submodule version alignment and pairing verification
 6. remote rewiring for workspace repo
 7. remote rewiring for `vllm` and `vllm-ascend` submodule repos (only after step 4)
 8. branch tracking updates

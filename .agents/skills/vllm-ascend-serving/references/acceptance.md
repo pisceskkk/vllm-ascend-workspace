@@ -103,12 +103,16 @@
 
 **Given** a ready machine where parity fails,
 **When** `serve_start.py` runs (without `--skip-parity`),
-**Then** returns `status=blocked` and does not launch.
+**Then** returns `status=blocked` and does not stop an existing service or launch a new one.
+
+The start command forwards an explicitly supplied `--vllm-commit` to parity;
+without it, a verified-pin mismatch remains a structured parity blocker.
 
 ## A13. Skip parity
 
 **When** `serve_start.py --skip-parity` runs,
-**Then** parity is not invoked and launch proceeds.
+**Then** parity transport is not invoked, but the local source-pairing gate
+still runs and launch proceeds only for a proven pair.
 
 ## A14. Previous service cleanup
 

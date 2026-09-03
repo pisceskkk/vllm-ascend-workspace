@@ -421,7 +421,7 @@
       "applicable_versions": "all vllm-ascend revisions that publish .github/vllm-main-verified.commit",
       "id": "vllm-submodule-resolve-vllm-ascend-ci-pin",
       "rule": {
-        "avoidance": "Do not hard-code the current vLLM commit in workspace knowledge or workflow logic. Treat a missing or invalid verified-main pin as unknown compatibility and stop before changing the submodule.",
+        "avoidance": "Do not hard-code the current vLLM commit or infer compatibility from workflow/docs/release-tag/main/current-HEAD fallbacks. Unless the user explicitly supplies a vLLM commit, treat a missing, invalid, or mismatched verified-main pin as a blocking error before remote execution.",
         "candidate_id": "repo-init-resolve-the-vllm-compatibility-ref-from-vllm-asc-fe75d952c8",
         "candidate_ids": [
           "repo-init-resolve-the-vllm-compatibility-ref-from-vllm-asc-fe75d952c8"
@@ -439,6 +439,16 @@
             "uri": ".agents/skills/repo-init/references/acceptance.md"
           },
           {
+            "kind": "code",
+            "stable": true,
+            "uri": ".agents/lib/vllm_version_pairing.py"
+          },
+          {
+            "kind": "acceptance-contract",
+            "stable": true,
+            "uri": ".agents/skills/remote-code-parity/references/acceptance.md"
+          },
+          {
             "kind": "ci-pin",
             "stable": true,
             "uri": "vllm-ascend/.github/vllm-main-verified.commit"
@@ -452,13 +462,14 @@
         "fingerprints": [
           "vllm-ascend/.github/vllm-main-verified.commit exists",
           "the local vllm submodule is being aligned for vllm-ascend validation",
-          "a previously hard-coded vllm main commit may no longer match current vllm-ascend ci"
+          "a previously hard-coded vllm main commit may no longer match current vllm-ascend ci",
+          "vLLM/vllm-ascend version pairing mismatch"
         ],
         "first_seen_at": "2026-08-10T09:21:12Z",
         "last_verified_at": "2026-08-10T09:21:12Z",
         "occurrence_count": 1,
-        "owner_skill": "repo-init",
-        "resolution": "Resolve the revision at execution time with .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py, then checkout and verify vllm at the returned exact commit before building, syncing, or validating vllm-ascend.",
+        "owner_skill": "remote-code-parity",
+        "resolution": "Resolve and verify the revision at execution time with .agents/scripts/vllm_version_pairing.py. Use an explicitly user-supplied vLLM commit only when present; otherwise accept only .github/vllm-main-verified.commit from the checked-out vllm-ascend HEAD. Checkout the returned exact commit and require the pairing gate to report ready before syncing, building, or validating.",
         "root_cause": "The verified vLLM main revision is a moving compatibility contract owned by vllm-ascend CI, so a commit copied into documentation or an agent prompt becomes stale.",
         "scope": {
           "component": [
@@ -467,23 +478,25 @@
           ],
           "workflow": [
             "workspace-initialization",
-            "upstream-compatibility-validation"
+            "upstream-compatibility-validation",
+            "remote-code-parity",
+            "jiguang-evaluation-gate"
           ]
         },
         "summary": "Resolve the vLLM compatibility ref from vllm-ascend's verified-main pin",
         "symptom": "The local vllm submodule can drift from the exact vLLM main revision currently verified by vllm-ascend CI.",
         "verification": {
           "checks": [
-            "The resolver read vllm-ascend/.github/vllm-main-verified.commit and returned 0351e9aa1fdf1a51329d1906881528dfe61fc88e.",
-            "The local vllm submodule was checked out at exactly 0351e9aa1fdf1a51329d1906881528dfe61fc88e.",
-            "The materialized remote runtime recorded the same vLLM source head before SFA/CP validation."
+            "The resolver reads vllm-ascend HEAD:.github/vllm-main-verified.commit and returns one exact 40-character commit SHA.",
+            "The local vllm submodule HEAD equals the resolved commit, or equals an explicitly user-supplied commit override.",
+            "Remote-code-parity and Jiguang gates block before mutation when the source pair cannot be proven."
           ],
           "status": "passed"
         }
       },
       "source": "promoted from candidate repo-init-resolve-the-vllm-compatibility-ref-from-vllm-asc-fe75d952c8; stable evidence: .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py, .agents/skills/repo-init/references/acceptance.md, vllm-ascend/.github/vllm-main-verified.commit",
       "status": "experimental",
-      "updated_at": "2026-08-10"
+      "updated_at": "2026-09-03"
     },
     {
       "applicable_versions": "all workspace-managed revisions",

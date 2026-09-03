@@ -31,7 +31,8 @@ def parser() -> argparse.ArgumentParser:
     root.add_argument("--repo-root", type=Path, default=ROOT)
     root.add_argument("--state-file", type=Path, default=DEFAULT_STATE)
     actions = root.add_subparsers(dest="action", required=True)
-    actions.add_parser("gate")
+    gate = actions.add_parser("gate")
+    gate.add_argument("--vllm-commit", help="explicit user-specified vLLM commit override")
     plan = actions.add_parser("plan")
     plan.add_argument("--machine", required=True)
     plan.add_argument("--image-digest", required=True)
@@ -47,7 +48,10 @@ def main() -> int:
     args = parser().parse_args()
     try:
         if args.action == "gate":
-            result = workspace_gate(args.repo_root.resolve())
+            result = workspace_gate(
+                args.repo_root.resolve(),
+                explicit_vllm_commit=args.vllm_commit,
+            )
         elif args.action == "plan":
             result = plan_runtime(
                 machine=args.machine,

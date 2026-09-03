@@ -25,6 +25,11 @@ Keep a **ready** remote runtime in exact code parity with the local `vllm-ascend
 ## Critical rules
 
 - Treat the **local working tree** as the source of truth: committed + staged + unstaged + untracked non-ignored.
+- Before building a local snapshot, enforce the exact vLLM/vllm-ascend source
+  pairing. Use `--vllm-commit <sha>` only for a commit explicitly supplied by
+  the user; otherwise require vLLM HEAD to equal the full SHA in
+  `.github/vllm-main-verified.commit` at vllm-ascend HEAD. Fail closed on a
+  missing/invalid pin or mismatch.
 - Do **not** require the user to commit or push before parity.
 - Do **not** use `scp`, `sftp`, `rsync`, `sshpass`, or `expect`.
 - Do **not** require GitHub credentials on the host or in the container.
@@ -137,6 +142,7 @@ Normal agent entrypoint:
 
 - POSIX: `python3 .agents/skills/remote-code-parity/scripts/parity_sync.py (--machine <alias-or-ip> | --session-id <id>) ...`
 - Windows: `py -3 .agents/skills/remote-code-parity/scripts/parity_sync.py --machine <alias-or-ip> ...`
+- Explicit user override only: append `--vllm-commit <sha>`.
 
 Apply-mode split:
 
@@ -196,7 +202,7 @@ Before running parity for a container, check the persisted `sync_mode`:
 The user can switch sync mode at any time. `--force-reinstall` overrides `image` mode.
 If the agent forgets to set sync mode, `parity_sync.py` returns `status: blocked` before remote mutation.
 
-### 2. Resolve the ready target from inventory
+### 2. Resolve the ready target and enforce source-version pairing
 
 For normal agent work, start from `parity_sync.py`. Use `--session-id` when the task was created by `session-management`; use legacy `--machine` only for single-tenant base-container work.
 
@@ -207,6 +213,12 @@ Collect from local machine inventory:
 - runtime root inside the container
 - logical container identity: `<container-name>@<runtime-root>`
 - workspace id
+
+Before SSH preflight or snapshot construction, run the strict pairing check
+against the resolved source worktree. The low-level `plan` and `sync` commands
+repeat the check so callers cannot bypass it. Without `--vllm-commit`, the
+checked-out vllm-ascend HEAD's `.github/vllm-main-verified.commit` is the only
+allowed source. An explicit override must resolve to the current vLLM HEAD.
 
 Stop if the request is not actually about imminent remote execution.
 
@@ -348,6 +360,7 @@ pip install --no-deps -v -e . --no-build-isolation
 Return a compact JSON summary that includes:
 
 - final `status`
+- resolved vLLM version-pairing evidence, or the pairing blocker
 - `container_cache_root`
 - synthetic snapshot commit ids
 - observed runtime commit ids

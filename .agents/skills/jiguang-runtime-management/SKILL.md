@@ -16,6 +16,9 @@ Before first use, store a fresh platform token in Windows Credential Manager wit
 - Reject administrator, cross-user, permission-assignment, plaintext-password, terminal, and arbitrary-script operations.
 - Allow current-account inventory reads, plans, device registration, and device-record removal independently of Git state.
 - Require a clean, committed, pushed workspace and clean `vllm` and `vllm-ascend` submodules before runtime replacement, container connection, deployment, or evaluation submission.
+- Enforce the strict vLLM/vllm-ascend commit pairing in the same gate. Use an
+  explicit `--vllm-commit <sha>` only when the user supplied that commit;
+  otherwise require the checked-out vllm-ascend HEAD verified pin.
 - Never sync uncommitted code to a Jiguang runtime and never debug inside it.
 
 ## Maintain account inventory
@@ -24,7 +27,10 @@ Resolve exact current-account resource IDs before a mutation. Device deletion re
 
 ## Prepare a runtime
 
-1. Run `python3 scripts/jiguang_runtime.py gate`. Stop before runtime, container-connection, deployment, or evaluation mutation when it reports `blocked`.
+1. Run `python3 scripts/jiguang_runtime.py gate`. Append `--vllm-commit <sha>`
+   only for an explicit user override. Stop before runtime,
+   container-connection, deployment, or evaluation mutation when it reports
+   `blocked`.
 2. Read account-owned devices with `jiguang.own_devices_list` and map the chosen physical machine to the workspace inventory.
 3. Run `scripts/jiguang_device_key.py --machine <alias> --credential-target <target>` to prove the selected private key matches the key accepted by the container. Add `--confirm` to store its file reference in Windows Credential Manager. Run this SSH-backed entrypoint outside the filesystem sandbox from its first call.
 4. Run the machine-management `npu_occupancy.py` read-only probe. Trust observed hardware and process occupancy over platform availability.

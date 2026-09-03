@@ -11,6 +11,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
+from vllm_version_pairing import check_workspace_vllm_pairing
+
 NATIVE_SUFFIXES = {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hxx", ".s", ".S"}
 NATIVE_NAMES = {"CMakeLists.txt", "setup.py", "pyproject.toml"}
 NATIVE_PREFIXES = ("csrc/", "cmake/", "kernels/", "ops/")
@@ -56,7 +58,11 @@ def _repository_snapshot(repo: Path) -> dict[str, Any]:
     }
 
 
-def workspace_gate(repo_root: Path) -> dict[str, Any]:
+def workspace_gate(
+    repo_root: Path,
+    *,
+    explicit_vllm_commit: str | None = None,
+) -> dict[str, Any]:
     repositories = {
         "workspace": _repository_snapshot(repo_root),
         "vllm": _repository_snapshot(repo_root / "vllm"),
@@ -70,10 +76,17 @@ def workspace_gate(repo_root: Path) -> dict[str, Any]:
             blockers.append(f"{name} has no configured upstream branch")
         elif not snapshot["pushed"]:
             blockers.append(f"{name} HEAD is not contained in its upstream branch")
+    pairing = check_workspace_vllm_pairing(
+        repo_root,
+        explicit_vllm_commit=explicit_vllm_commit,
+    )
+    if pairing.get("status") != "ready":
+        blockers.append(pairing.get("reason", "vLLM/vllm-ascend pairing could not be proven"))
     return {
         "outcome": "ready" if not blockers else "blocked",
         "explicit_opt_in_required": True,
         "repositories": repositories,
+        "vllm_version_pairing": pairing,
         "blockers": blockers,
     }
 

@@ -137,6 +137,15 @@ python3 .agents/skills/remote-code-parity/scripts/parity_sync.py \
   --machine blue-a
 ```
 
+This uses the vllm-ascend HEAD verified pin automatically. Only when the user
+explicitly chose a different exact vLLM commit, pass it through:
+
+```bash
+python3 .agents/skills/remote-code-parity/scripts/parity_sync.py \
+  --machine blue-a \
+  --vllm-commit <sha>
+```
+
 ## Normal sync against an isolated session
 
 ```bash
@@ -248,6 +257,9 @@ python3 .agents/skills/remote-code-parity/scripts/remote_code_parity.py plan \
   --container-identity vaws-blue@/vllm-workspace \
   --runtime-root /vllm-workspace
 ```
+
+Both low-level `plan` and `sync` enforce the same strict pairing gate. Add
+`--vllm-commit <sha>` only for an explicit user override.
 
 ## Clean old container-local manifests
 

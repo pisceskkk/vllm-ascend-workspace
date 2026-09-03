@@ -23,6 +23,11 @@ These should not trigger `remote-code-parity` unless remote code parity is the o
 
 ### Universal
 
+- the wrapper rejects a missing/invalid vllm-ascend HEAD verified pin or a
+  mismatched vLLM HEAD before SSH and snapshot construction
+- direct low-level `plan` and `sync` calls enforce the same pairing gate
+- only an explicit `--vllm-commit` can override the verified pin, and the
+  override must resolve to the current vLLM HEAD
 - after the sync-mode gate, the normal parity entrypoint runs a read-only
   `ssh -G` preflight before invoking the low-level sync
 - Codex runs the entire parity public entrypoint outside the filesystem sandbox
@@ -186,6 +191,8 @@ Review these files together after every substantial skill edit:
 - `.agents/skills/remote-code-parity/scripts/parity_sync.py`
 - `.agents/skills/remote-code-parity/scripts/install_consent.py`
 - `.agents/skills/remote-code-parity/scripts/gc_runtime_cache.py`
+- `.agents/scripts/vllm_version_pairing.py`
+- `.agents/lib/vllm_version_pairing.py`
 - `AGENTS.md`
 - `.agents/README.md`
 - `README.md`

@@ -58,6 +58,7 @@ from _common import (
 from vaws_session_state import allocate_service_port, file_lock, release_service_port, session_lock_dir
 from vaws_local_state import effective_workspace_alias, load_workspace_identity
 from vaws_validate import parse_device_csv, require_env_name
+from vllm_version_pairing import check_workspace_vllm_pairing  # noqa: E402
 
 RUNTIME_DIR_BASE = ".vaws-runtime/serving"
 DEFAULT_HEALTH_TIMEOUT = 300
@@ -74,7 +75,12 @@ def service_runtime_dir(runtime_base: str, instance_ts: str, alias: str | None) 
 # Parity
 # ---------------------------------------------------------------------------
 
-def run_parity(machine: str | None, session_id: str | None, session_file: Path | None = None) -> dict[str, Any]:
+def run_parity(
+    machine: str | None,
+    session_id: str | None,
+    session_file: Path | None = None,
+    vllm_commit: str | None = None,
+) -> dict[str, Any]:
     parity_script = ROOT / ".agents" / "skills" / "remote-code-parity" / "scripts" / "parity_sync.py"
     if session_file is not None:
         cmd = [sys.executable, str(parity_script), "--session-file", str(session_file)]
@@ -83,6 +89,8 @@ def run_parity(machine: str | None, session_id: str | None, session_file: Path |
     else:
         assert machine is not None
         cmd = [sys.executable, str(parity_script), "--machine", machine]
+    if vllm_commit:
+        cmd.extend(["--vllm-commit", vllm_commit])
     proc = subprocess.Popen(
         cmd,
         cwd=str(ROOT),
@@ -107,20 +115,18 @@ def run_parity(machine: str | None, session_id: str | None, session_file: Path |
     returncode = proc.wait()
     thread.join(timeout=1)
     stderr = "".join(stderr_lines)
-    if returncode != 0:
-        return {
-            "status": "failed",
-            "error": f"parity sync failed (rc={returncode})",
-            "stderr_tail": stderr[-1000:],
-        }
     try:
-        return json.loads(stdout)
+        payload = json.loads(stdout)
     except json.JSONDecodeError:
         return {
             "status": "failed",
-            "error": "parity sync returned non-JSON output",
+            "error": f"parity sync returned non-JSON output (rc={returncode})",
             "stdout_tail": (stdout or "")[-500:],
+            "stderr_tail": stderr[-1000:],
         }
+    if returncode != 0:
+        payload.setdefault("error", f"parity sync failed (rc={returncode})")
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -589,7 +595,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="remove a vllm arg prefix from inherited config (repeatable)",
     )
     p.add_argument("--relaunch", action="store_true", help="reuse previous config as base")
-    p.add_argument("--skip-parity", action="store_true", help="skip remote-code-parity gate")
+    p.add_argument(
+        "--skip-parity",
+        action="store_true",
+        help="skip parity transport but still enforce local vLLM/vllm-ascend pairing",
+    )
+    p.add_argument(
+        "--vllm-commit",
+        help="explicit user-specified vLLM commit override passed to remote-code-parity",
+    )
     p.add_argument("--port", type=int, help="force a specific port")
     p.add_argument(
         "--health-timeout", type=int, default=DEFAULT_HEALTH_TIMEOUT,
@@ -628,6 +642,22 @@ def main(argv: list[str] | None = None) -> int:
             session_id=args.session_id,
             session_file=args.session_file,
         )
+        source_root = ROOT
+        if target.session:
+            worktree_root = target.session.get("local", {}).get("worktree_root")
+            if worktree_root:
+                source_root = Path(worktree_root)
+        pairing = check_workspace_vllm_pairing(
+            source_root,
+            explicit_vllm_commit=args.vllm_commit,
+        )
+        if pairing.get("status") != "ready":
+            print_json({
+                "status": "blocked",
+                "error": "vLLM/vllm-ascend pairing gate failed",
+                "vllm_version_pairing": pairing,
+            })
+            return 1
         record = target.record
         alias = target.alias
         ep = target.endpoint
@@ -830,7 +860,12 @@ def main(argv: list[str] | None = None) -> int:
         # ---- parity gate ----
         if not args.skip_parity:
             emit_progress("parity-sync", "ensuring remote code parity")
-            parity = run_parity(args.machine, target.session_id, target.session_file)
+            parity = run_parity(
+                args.machine,
+                target.session_id,
+                target.session_file,
+                args.vllm_commit,
+            )
             parity_status = parity.get("status")
             if parity_status not in ("ready", "ok", "success", "skipped"):
                 print_json({
@@ -842,7 +877,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             emit_progress("parity-sync", "parity confirmed")
         else:
-            parity = {"status": "skipped"}
+            parity = {"status": "skipped", "vllm_version_pairing": pairing}
 
         # ---- probe NPUs on the HOST for cross-container visibility ----
         h_ep = target.host_endpoint

@@ -41,6 +41,7 @@ class SessionParityStateTests(unittest.TestCase):
             container_cache_root="/cache",
             container_user="root",
             preserve_path=[],
+            vllm_commit=None,
         )
         session = {
             "session_id": "session-a",
@@ -90,6 +91,7 @@ class SessionParityStateTests(unittest.TestCase):
             force_reinstall=False,
             dry_run=False,
             apply_mode="materialize",
+            vllm_commit="a" * 40,
         )
 
         command = wrapper.build_low_level_command(derived, args)
@@ -98,6 +100,8 @@ class SessionParityStateTests(unittest.TestCase):
         self.assertEqual(command[index + 1], "/repos/workspace")
         transport_index = command.index("--transport")
         self.assertEqual(command[transport_index + 1], "auto")
+        pairing_index = command.index("--vllm-commit")
+        self.assertEqual(command[pairing_index + 1], "a" * 40)
 
 
 if __name__ == "__main__":

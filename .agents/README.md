@@ -54,6 +54,7 @@ compatibility backend for managed sessions, sync, service adapters, and cleanup.
 - `.agents/skills/curate-workspace-knowledge/` is the explicit-only package for reviewing and promoting verified candidates into the existing formal knowledge files.
 - `.agents/scripts/workspace_profile.py` is the shared low-level helper for the local workspace machine profile.
 - `.agents/scripts/workspace_identity.py` manages the persistent local UUID4 and optional unified project/agent/resource alias.
+- `.agents/scripts/vllm_version_pairing.py` resolves and enforces the exact vLLM commit paired with the checked-out vllm-ascend HEAD.
 - `.agents/scripts/run_manifest.py` creates and validates shared Run Manifest v1 files.
 - `.agents/scripts/knowledge_validate.py` validates the versioned shared knowledge documents.
 - `.agents/scripts/knowledge_query.py` retrieves compact matching knowledge summaries and expands one entry only by id.
@@ -84,6 +85,7 @@ Current primary helpers:
 - `repo-init/scripts/repo_init_probe.py`
 - `repo-init/scripts/repo_init_profile.py`
 - `repo-init/scripts/repo_topology.py`
+- `scripts/vllm_version_pairing.py`
 - `machine-management/scripts/machine_add.py`
 - `machine-management/scripts/machine_verify.py`
 - `machine-management/scripts/machine_repair.py`

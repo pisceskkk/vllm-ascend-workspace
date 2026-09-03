@@ -1505,7 +1505,12 @@ def _run_json_command(cmd: list[str], *, cwd: Path = ROOT, relay_stderr: bool = 
     return rc, payload, stdout, stderr
 
 
-def parity_derived_args(target: RemoteTarget, *, force_reinstall: bool = False) -> dict[str, Any]:
+def parity_derived_args(
+    target: RemoteTarget,
+    *,
+    force_reinstall: bool = False,
+    vllm_commit: str | None = None,
+) -> dict[str, Any]:
     script = ROOT / ".agents" / "skills" / "remote-code-parity" / "scripts" / "parity_sync.py"
     cmd = [sys.executable, str(script), "--print-derived-args"]
     if target.session_file:
@@ -1516,9 +1521,12 @@ def parity_derived_args(target: RemoteTarget, *, force_reinstall: bool = False) 
         cmd.extend(["--machine", target.alias])
     if force_reinstall:
         cmd.append("--force-reinstall")
+    if vllm_commit:
+        cmd.extend(["--vllm-commit", vllm_commit])
     rc, payload, stdout, stderr = _run_json_command(cmd, relay_stderr=True)
     if rc != 0:
         raise RemoteToolboxError(f"failed to derive parity args: stdout={tail_text(stdout)} stderr={tail_text(stderr)}")
+    payload["vllm_commit"] = vllm_commit
     return payload
 
 
@@ -1543,6 +1551,8 @@ def _parity_plan_manifest(derived: dict[str, Any]) -> dict[str, Any]:
     ]
     for preserve in derived.get("preserve_path", []):
         cmd.extend(["--preserve-path", preserve])
+    if derived.get("vllm_commit"):
+        cmd.extend(["--vllm-commit", derived["vllm_commit"]])
     rc, payload, stdout, stderr = _run_json_command(cmd, relay_stderr=True)
     if rc != 0:
         raise RemoteToolboxError(f"failed to build parity plan: stdout={tail_text(stdout)} stderr={tail_text(stderr)}")
@@ -1583,10 +1593,20 @@ def _consent_state(derived: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def sync_plan(target: RemoteTarget, *, mode: str, force_reinstall: bool = False) -> dict[str, Any]:
+def sync_plan(
+    target: RemoteTarget,
+    *,
+    mode: str,
+    force_reinstall: bool = False,
+    vllm_commit: str | None = None,
+) -> dict[str, Any]:
     started_at = now_iso()
     start = time.monotonic()
-    derived = parity_derived_args(target, force_reinstall=force_reinstall)
+    derived = parity_derived_args(
+        target,
+        force_reinstall=force_reinstall,
+        vllm_commit=vllm_commit,
+    )
     manifest = _parity_plan_manifest(derived)
     consent = _consent_state(derived)
     install_reasons: dict[str, list[str]] = {}
@@ -1647,7 +1667,14 @@ def sync_plan(target: RemoteTarget, *, mode: str, force_reinstall: bool = False)
     }
 
 
-def sync_apply(target: RemoteTarget, *, mode: str, force_reinstall: bool = False, dry_run: bool = False) -> dict[str, Any]:
+def sync_apply(
+    target: RemoteTarget,
+    *,
+    mode: str,
+    force_reinstall: bool = False,
+    dry_run: bool = False,
+    vllm_commit: str | None = None,
+) -> dict[str, Any]:
     started_at = now_iso()
     start = time.monotonic()
     script = ROOT / ".agents" / "skills" / "remote-code-parity" / "scripts" / "parity_sync.py"
@@ -1660,6 +1687,8 @@ def sync_apply(target: RemoteTarget, *, mode: str, force_reinstall: bool = False
         cmd.extend(["--machine", target.alias])
     if force_reinstall:
         cmd.append("--force-reinstall")
+    if vllm_commit:
+        cmd.extend(["--vllm-commit", vllm_commit])
     if dry_run:
         cmd.append("--dry-run")
     cmd.extend(["--apply-mode", mode])
@@ -2085,11 +2114,17 @@ def cli_sync_plan(argv: Sequence[str] | None = None) -> int:
     add_target_args(parser)
     parser.add_argument("--mode", choices=("source-only", "materialize", "install"), required=True)
     parser.add_argument("--force-reinstall", action="store_true")
+    parser.add_argument("--vllm-commit", help="explicit user-specified vLLM commit override")
     args = parser.parse_args(argv)
     started_at = now_iso()
     start = time.monotonic()
     try:
-        print_json(sync_plan(target_from_args(args), mode=args.mode, force_reinstall=args.force_reinstall))
+        print_json(sync_plan(
+            target_from_args(args),
+            mode=args.mode,
+            force_reinstall=args.force_reinstall,
+            vllm_commit=args.vllm_commit,
+        ))
         return 0
     except Exception as exc:  # noqa: BLE001
         return _cli_error(exc, started_at=started_at, start=start)
@@ -2100,12 +2135,19 @@ def cli_sync_apply(argv: Sequence[str] | None = None) -> int:
     add_target_args(parser)
     parser.add_argument("--mode", choices=("source-only", "materialize", "install"), required=True)
     parser.add_argument("--force-reinstall", action="store_true")
+    parser.add_argument("--vllm-commit", help="explicit user-specified vLLM commit override")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     started_at = now_iso()
     start = time.monotonic()
     try:
-        payload = sync_apply(target_from_args(args), mode=args.mode, force_reinstall=args.force_reinstall, dry_run=args.dry_run)
+        payload = sync_apply(
+            target_from_args(args),
+            mode=args.mode,
+            force_reinstall=args.force_reinstall,
+            dry_run=args.dry_run,
+            vllm_commit=args.vllm_commit,
+        )
         print_json(payload)
         return 0 if payload["status"] in {"ready", "source-only", "materialized", "dry-run", "ok", "skipped"} else 1
     except Exception as exc:  # noqa: BLE001

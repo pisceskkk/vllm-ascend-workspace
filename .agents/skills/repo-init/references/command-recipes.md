@@ -94,16 +94,24 @@ git submodule update --init --recursive
 
 ## Resolve CI-pinned vLLM ref
 
-Use this after `vllm-ascend/` is populated and the user chose CI-pinned
-alignment:
+Use this after `vllm-ascend/` is populated. Without an explicit user override,
+the checked-out vllm-ascend HEAD's verified pin is mandatory:
 
 ```bash
 python3 .agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py --vllm-ascend-dir vllm-ascend
 ```
 
-Then check out `vllm/` at the returned `vllm_ref`. The resolver prefers
-`.github/vllm-main-verified.commit`; older checkouts may fall back to a
-workflow `vllm_version` or docs `main_vllm_commit` value.
+When the user explicitly supplied a vLLM commit, add
+`--vllm-commit <sha>`. Then check out `vllm/` at the returned `vllm_ref` and
+verify the result:
+
+```bash
+python3 .agents/scripts/vllm_version_pairing.py check
+```
+
+Add the same `--vllm-commit <sha>` to the check for an explicit override.
+There is no automatic fallback to workflow, docs, release-tag, `main`, or the
+current vLLM checkout.
 
 ## Quiet main comparison
 

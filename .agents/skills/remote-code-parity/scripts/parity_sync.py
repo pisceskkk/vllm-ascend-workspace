@@ -21,6 +21,7 @@ if str(LIB_DIR) not in sys.path:
 
 from vaws_session_state import load_session_lookup  # noqa: E402
 from vaws_ssh_preflight import blocked_status_payload, ssh_client_preflight  # noqa: E402
+from vllm_version_pairing import check_workspace_vllm_pairing  # noqa: E402
 
 
 DEFAULT_CONTAINER_USER = 'root'
@@ -159,6 +160,8 @@ def build_low_level_command(derived: dict[str, Any], args: argparse.Namespace) -
         cmd.extend(['--preserve-path', preserve_path])
     if args.snapshot_id:
         cmd.extend(['--snapshot-id', args.snapshot_id])
+    if args.vllm_commit:
+        cmd.extend(['--vllm-commit', args.vllm_commit])
     if args.print_manifest:
         cmd.append('--print-manifest')
     if args.force_reinstall:
@@ -185,6 +188,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--container-cache-root', default=DEFAULT_CONTAINER_CACHE_ROOT)
     parser.add_argument('--preserve-path', action='append', default=[])
     parser.add_argument('--snapshot-id', default=None)
+    parser.add_argument(
+        '--vllm-commit',
+        default=None,
+        help='Explicit user-specified vLLM commit override; otherwise enforce the vllm-ascend HEAD verified pin.',
+    )
     parser.add_argument('--print-manifest', action='store_true')
     parser.add_argument('--force-reinstall', action='store_true', help='Force reinstall of vllm and vllm-ascend regardless of what changed.')
     parser.add_argument('--dry-run', action='store_true')
@@ -244,6 +252,20 @@ def main() -> int:
                 'container_identity': derived['container_identity'],
             }))
             return 0
+
+    pairing = check_workspace_vllm_pairing(
+        Path(derived['workspace_root']),
+        explicit_vllm_commit=args.vllm_commit,
+    )
+    if pairing.get('status') != 'ready':
+        print(json_dump({
+            'status': 'blocked',
+            'reason': pairing.get('reason', 'vLLM/vllm-ascend pairing could not be proven'),
+            'server_name': derived['server_name'],
+            'container_identity': derived['container_identity'],
+            'vllm_version_pairing': pairing,
+        }))
+        return 2
 
     ssh_preflight = ssh_client_preflight(
         derived['container_host'],

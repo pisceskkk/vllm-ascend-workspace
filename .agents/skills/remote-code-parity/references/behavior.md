@@ -10,6 +10,9 @@ This file defines the durable behavior of `remote-code-parity`.
 - Keep all local parity state under `.vaws-local/remote-code-parity/`.
 - In session mode, derive the source worktree, base-repo state root, and target container from `.vaws-local/sessions/<session-id>/session.json`.
 - Fail closed when parity cannot be proven.
+- Fail closed before snapshot construction unless vLLM HEAD matches the exact
+  commit resolved from vllm-ascend HEAD's verified pin, or matches an explicit
+  user-supplied `--vllm-commit` override.
 - Prove the final container-side commit ids instead of trusting command exit status alone.
 - Stream phase progress on `stderr` as `__VAWS_PARITY_PROGRESS__=<json>` and keep one final JSON payload on `stdout`.
 - Keep runtime-install phases attributable instead of collapsing them into one opaque step: uninstall, `vllm`, `vllm-ascend` requirements, `vllm-ascend`, import verification, and marker write should each surface their own progress event.
@@ -64,6 +67,8 @@ repository while snapshots remain isolated to the worktree.
 
 Before this skill mutates anything remotely, confirm all of these:
 
+- the vLLM/vllm-ascend pairing gate is `ready`; missing or invalid
+  `.github/vllm-main-verified.commit` and mismatched vLLM HEAD are blockers
 - after resolving a `local` sync mode, run the shared `ssh -G` client-config
   preflight against the actual container endpoint; a local system config
   ownership failure blocks before snapshot publication or SSH transport

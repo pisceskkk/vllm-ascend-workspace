@@ -13,18 +13,19 @@ The core value of this skill is that all SSH escaping is handled inside `serve_s
 ## Launch lifecycle
 
 1. **resolve-target** — look up either the legacy machine alias or a session spec
-2. **lock** — in session mode, acquire the session serving lock so `start` and `stop` for the same session cannot race
-3. **stop-existing** — if a previous service is recorded for that target, send SIGINT+SIGTERM
-4. **parity-sync** — call `parity_sync.py` (unless `--skip-parity`)
-5. **probe-npus** — check NPU device availability via `npu-smi info`; validate or auto-select devices
-6. **validate** — check model path exists remotely via `test -d` / `test -f`
-7. **allocate-port** — in session mode, snapshot listening ports once, allocate a leased port locally, then recheck the selected port before launch
-8. **launch** — build and execute the launch script via SSH
-9. **persist-starting-state** — after PID capture, write serving state with `status=starting`
-10. **probe-health** — poll `GET /health` (HTTP 200)
-11. **probe-models** — poll `GET /v1/models` (non-empty `data` array)
-12. **persist-final-state** — update serving state to `ready` or `started`
-13. **output** — print JSON to stdout
+2. **source-pairing** — enforce the explicit vLLM commit or the vllm-ascend HEAD verified pin before any remote lifecycle mutation
+3. **lock** — in session mode, acquire the session serving lock so `start` and `stop` for the same session cannot race
+4. **stop-existing** — if a previous service is recorded for that target, send SIGINT+SIGTERM
+5. **parity-sync** — call `parity_sync.py` (unless `--skip-parity`) and forward an explicitly user-supplied `--vllm-commit`; `--skip-parity` skips transport only
+6. **probe-npus** — check NPU device availability via `npu-smi info`; validate or auto-select devices
+7. **validate** — check model path exists remotely via `test -d` / `test -f`
+8. **allocate-port** — in session mode, snapshot listening ports once, allocate a leased port locally, then recheck the selected port before launch
+9. **launch** — build and execute the launch script via SSH
+10. **persist-starting-state** — after PID capture, write serving state with `status=starting`
+11. **probe-health** — poll `GET /health` (HTTP 200)
+12. **probe-models** — poll `GET /v1/models` (non-empty `data` array)
+13. **persist-final-state** — update serving state to `ready` or `started`
+14. **output** — print JSON to stdout
 
 ## Session mode
 

@@ -40,7 +40,7 @@ A successful run should satisfy all applicable items below.
   - machine username choice if the profile is missing
   - repo topology choice
   - submodule-init choice
-  - vllm version alignment choice (when the probe shows submodules are uninitialized)
+  - notice of mandatory automatic vLLM alignment whenever populated submodules are or will be in scope
 - the machine-username branch uses exactly three options:
   - `git-username`
   - `random`
@@ -80,7 +80,10 @@ A successful run should satisfy all applicable items below.
 ### Submodules and topology
 
 - initializes submodules recursively when the user approved it
-- resolves CI-pinned vLLM alignment with `resolve_vllm_ci_pin.py`, preferring `.github/vllm-main-verified.commit` over older workflow/docs fallbacks
+- uses an explicitly user-supplied vLLM commit only when one was provided
+- otherwise resolves vLLM only from `.github/vllm-main-verified.commit` at the checked-out vllm-ascend HEAD
+- fails closed instead of falling back to workflow, docs, release tag, `main`, current vLLM HEAD, or the parent gitlink
+- verifies the checked-out pair with `.agents/scripts/vllm_version_pairing.py check`
 - completes submodule init before configuring submodule remotes
 - `repo_topology.py configure --repo <submodule>` errors out when the submodule is not initialized (git root mismatch)
 - preserves nonstandard remotes
@@ -101,5 +104,7 @@ Review these files together after every substantial skill edit:
 - `.agents/skills/repo-init/scripts/repo_init_probe.py`
 - `.agents/skills/repo-init/scripts/repo_topology.py`
 - `.agents/skills/repo-init/scripts/resolve_vllm_ci_pin.py`
+- `.agents/scripts/vllm_version_pairing.py`
+- `.agents/lib/vllm_version_pairing.py`
 - `.agents/scripts/workspace_profile.py`
 - `.agents/lib/vaws_local_state.py`
